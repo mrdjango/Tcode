@@ -20,6 +20,8 @@ import { ResponseNode } from './chat-tree-view/chat-view-tree-widget';
 
 export const ChatResponsePartRenderer = Symbol('ChatResponsePartRenderer');
 export interface ChatResponsePartRenderer<T extends ChatResponseContent> {
+    /** Keep specialized content outside generic consecutive tool-call groups. */
+    readonly groupingBehavior?: 'standalone';
     canHandle(response: ChatResponseContent): number;
     render(response: T, parentNode: ResponseNode): ReactNode;
     /**

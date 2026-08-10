@@ -16,6 +16,14 @@
 
 import { expect } from 'chai';
 import { isValidTodoItem } from '../common/todo-tool';
+import { TodoToolRenderer } from './todo-tool-renderer';
+
+describe('TodoToolRenderer', () => {
+    it('declares Todo updates as standalone chat content', () => {
+        const renderer = new TodoToolRenderer() as TodoToolRenderer & { groupingBehavior?: string };
+        expect(renderer.groupingBehavior).to.equal('standalone');
+    });
+});
 
 describe('isValidTodoItem', () => {
     it('should accept a minimal valid item', () => {
@@ -46,4 +54,3 @@ describe('isValidTodoItem', () => {
     });
 
 });
-

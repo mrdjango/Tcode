@@ -88,6 +88,8 @@ const TodoListWithConfirmation = withToolCallConfirmation(TodoListComponent);
 @injectable()
 export class TodoToolRenderer implements ChatResponsePartRenderer<ToolCallChatResponseContent> {
 
+    readonly groupingBehavior = 'standalone' as const;
+
     @inject(ToolConfirmationManager)
     protected toolConfirmationManager: ToolConfirmationManager;
 

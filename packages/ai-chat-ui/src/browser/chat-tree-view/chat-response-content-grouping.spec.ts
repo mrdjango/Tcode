@@ -19,11 +19,15 @@ import {
     ChatResponseContent,
     MarkdownChatResponseContent,
     MarkdownChatResponseContentImpl,
+    ToolCallChatResponseContent,
     ToolCallChatResponseContentImpl
 } from '@theia/ai-chat/lib/common';
 
 interface GroupingModule {
-    groupChatResponseContent?: (content: readonly ChatResponseContent[]) => Array<{
+    groupChatResponseContent?: (
+        content: readonly ChatResponseContent[],
+        isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean
+    ) => Array<{
         kind: 'content' | 'toolCallGroup';
         content: ChatResponseContent | ChatResponseContent[];
         sourceIndex: number;
@@ -73,5 +77,19 @@ describe('groupChatResponseContent', () => {
         expect(result?.map(item => item.kind)).to.deep.equal(['toolCallGroup', 'content', 'toolCallGroup']);
         expect(result?.map(item => item.sourceIndex)).to.deep.equal([0, 3, 4]);
         expect(result?.[1].content).to.deep.equal(markdown('between'));
+    });
+
+    it('keeps a standalone tool outside counts and splits adjacent tool groups', () => {
+        const result = loadGroupingModule().groupChatResponseContent?.([
+            tool('one'), tool('two'), tool('three'),
+            tool('todoWrite'),
+            tool('four'), tool('five'), tool('six')
+        ], item => item.name !== 'todoWrite');
+
+        expect(result?.map(item => item.kind)).to.deep.equal(['toolCallGroup', 'content', 'toolCallGroup']);
+        expect(result?.map(item => item.sourceIndex)).to.deep.equal([0, 3, 4]);
+        expect((result?.[1].content as ToolCallChatResponseContent).name).to.equal('todoWrite');
+        expect(result?.filter(item => item.kind === 'toolCallGroup').map(item => (item.content as ChatResponseContent[]).length))
+            .to.deep.equal([3, 3]);
     });
 });

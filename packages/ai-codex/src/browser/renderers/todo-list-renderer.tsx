@@ -29,6 +29,8 @@ import { CollapsibleToolRenderer } from './collapsible-tool-renderer';
 @injectable()
 export class TodoListRenderer implements ChatResponsePartRenderer<CodexToolCallChatResponseContent> {
 
+    readonly groupingBehavior = 'standalone' as const;
+
     canHandle(response: ChatResponseContent): number {
         return response.kind === 'toolCall' &&
             (response as CodexToolCallChatResponseContent).name === 'todo_list'

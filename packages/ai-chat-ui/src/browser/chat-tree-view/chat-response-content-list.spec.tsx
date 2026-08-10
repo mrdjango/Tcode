@@ -21,7 +21,7 @@ let disableJSDOM = enableJSDOM();
 import { expect } from 'chai';
 import * as React from '@theia/core/shared/react';
 import { createRoot, Root } from '@theia/core/shared/react-dom/client';
-import { ChatResponseContent, ToolCallChatResponseContentImpl } from '@theia/ai-chat/lib/common';
+import { ChatResponseContent, ToolCallChatResponseContent, ToolCallChatResponseContentImpl } from '@theia/ai-chat/lib/common';
 import { ResponseNode } from './chat-view-tree-widget';
 
 disableJSDOM();
@@ -31,6 +31,7 @@ interface ContentListProps {
     node: ResponseNode;
     keyPrefix: string;
     renderContent: (content: ChatResponseContent, node: ResponseNode) => React.ReactNode;
+    isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean;
 }
 
 interface ContentListModule {
@@ -70,10 +71,19 @@ describe('ChatResponseContentList', () => {
         document.body.removeChild(container);
     });
 
-    const renderList = (content: readonly ChatResponseContent[]): void => {
+    const renderList = (
+        content: readonly ChatResponseContent[],
+        isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean
+    ): void => {
         const ContentList = loadContentList();
         root.render(ContentList
-            ? <ContentList content={content} node={node} keyPrefix='response' renderContent={renderContent} />
+            ? <ContentList
+                content={content}
+                node={node}
+                keyPrefix='response'
+                renderContent={renderContent}
+                isGroupableToolCall={isGroupableToolCall}
+            />
             : <div data-missing-content-list />
         );
     };
@@ -104,6 +114,24 @@ describe('ChatResponseContentList', () => {
             expect(summary?.textContent ?? '').to.contain('Running 3 tools');
             expect(summary?.getAttribute('aria-expanded')).to.equal('true');
             expect(container.querySelectorAll('.rendered-tool')).to.have.length(3);
+            done();
+        }, 0);
+    });
+
+    it('renders a standalone tool between two collapsed tool groups', done => {
+        renderList([
+            tool('one', true), tool('two', true), tool('three', true),
+            tool('todoWrite', true),
+            tool('four', true), tool('five', true), tool('six', true)
+        ], item => item.name !== 'todoWrite');
+
+        setTimeout(() => {
+            const summaries = container.querySelectorAll<HTMLButtonElement>('.theia-ToolCallGroup-summary');
+            expect(summaries).to.have.length(2);
+            expect(Array.from(summaries).map(summary => summary.textContent)).to.satisfy((labels: string[]) =>
+                labels.every(label => label.includes('Ran 3 tools')));
+            expect(container.querySelectorAll('.rendered-tool')).to.have.length(1);
+            expect(container.querySelector('.rendered-tool')?.textContent).to.equal('todoWrite');
             done();
         }, 0);
     });

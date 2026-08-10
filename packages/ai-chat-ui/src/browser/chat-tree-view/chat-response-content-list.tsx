@@ -26,6 +26,7 @@ export interface ChatResponseContentListProps {
     node: ResponseNode;
     keyPrefix: string;
     renderContent: (content: ChatResponseContent, node: ResponseNode) => React.ReactNode;
+    isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean;
 }
 
 interface ToolCallGroupProps {
@@ -80,9 +81,9 @@ const ToolCallGroup: React.FC<ToolCallGroupProps> = ({ tools, node, contentId, r
     );
 };
 
-export const ChatResponseContentList: React.FC<ChatResponseContentListProps> = ({ content, node, keyPrefix, renderContent }) => (
+export const ChatResponseContentList: React.FC<ChatResponseContentListProps> = ({ content, node, keyPrefix, renderContent, isGroupableToolCall }) => (
     <>
-        {groupChatResponseContent(content).map(item => item.kind === 'content' ? (
+        {groupChatResponseContent(content, isGroupableToolCall).map(item => item.kind === 'content' ? (
             <div className='theia-ResponseNode-Content' key={`${keyPrefix}-content-${item.sourceIndex}`}>
                 {renderContent(item.content, node)}
             </div>

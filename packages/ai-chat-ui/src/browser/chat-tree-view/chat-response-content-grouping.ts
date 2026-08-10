@@ -22,8 +22,11 @@ export type GroupedChatResponseContent =
     | { kind: 'content'; content: ChatResponseContent; sourceIndex: number }
     | { kind: 'toolCallGroup'; content: ToolCallChatResponseContent[]; sourceIndex: number };
 
-/** Groups only adjacent client tool calls, preserving the original content order and objects. */
-export function groupChatResponseContent(content: readonly ChatResponseContent[]): GroupedChatResponseContent[] {
+/** Groups only adjacent groupable client tool calls, preserving the original content order and objects. */
+export function groupChatResponseContent(
+    content: readonly ChatResponseContent[],
+    isGroupableToolCall: (content: ToolCallChatResponseContent) => boolean = () => true
+): GroupedChatResponseContent[] {
     const result: GroupedChatResponseContent[] = [];
     let run: Array<{ content: ToolCallChatResponseContent; sourceIndex: number }> = [];
 
@@ -41,7 +44,7 @@ export function groupChatResponseContent(content: readonly ChatResponseContent[]
     };
 
     content.forEach((item, sourceIndex) => {
-        if (ToolCallChatResponseContent.is(item)) {
+        if (ToolCallChatResponseContent.is(item) && isGroupableToolCall(item)) {
             run.push({ content: item, sourceIndex });
         } else {
             flush();

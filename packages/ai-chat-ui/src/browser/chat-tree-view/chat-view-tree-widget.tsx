@@ -697,6 +697,7 @@ export class ChatViewTreeWidget extends TreeWidget {
                     node={node}
                     keyPrefix={node.id}
                     renderContent={(content, parent) => this.getChatResponsePartRenderer(content, parent)}
+                    isGroupableToolCall={content => this.getChatResponsePartRendererContribution(content)?.groupingBehavior !== 'standalone'}
                 />
                 {!node.response.isComplete
                     && node.response.progressMessages
@@ -716,7 +717,16 @@ export class ChatViewTreeWidget extends TreeWidget {
     }
 
     protected getChatResponsePartRenderer(content: ChatResponseContent, node: ResponseNode): React.ReactNode {
-        const renderer = this.chatResponsePartRenderers.getContributions().reduce<[number, ChatResponsePartRenderer<ChatResponseContent> | undefined]>(
+        const renderer = this.getChatResponsePartRendererContribution(content);
+        if (!renderer) {
+            this.logger.error('No renderer found for content', content);
+            return <div>{nls.localize('theia/ai/chat-ui/chat-view-tree-widget/noRenderer', 'Error: No renderer found')}</div>;
+        }
+        return renderer.render(content, node);
+    }
+
+    protected getChatResponsePartRendererContribution(content: ChatResponseContent): ChatResponsePartRenderer<ChatResponseContent> | undefined {
+        return this.chatResponsePartRenderers.getContributions().reduce<[number, ChatResponsePartRenderer<ChatResponseContent> | undefined]>(
             (prev, current) => {
                 const prio = current.canHandle(content);
                 if (prio > prev[0]) {
@@ -724,11 +734,6 @@ export class ChatViewTreeWidget extends TreeWidget {
                 } return prev;
             },
             [-1, undefined])[1];
-        if (!renderer) {
-            this.logger.error('No renderer found for content', content);
-            return <div>{nls.localize('theia/ai/chat-ui/chat-view-tree-widget/noRenderer', 'Error: No renderer found')}</div>;
-        }
-        return renderer.render(content, node);
     }
 
     protected handleContextMenu(node: TreeNode | undefined, event: React.MouseEvent<HTMLElement>): void {
