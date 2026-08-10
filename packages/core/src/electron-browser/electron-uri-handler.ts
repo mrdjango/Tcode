@@ -27,14 +27,14 @@ export class ElectronUriHandlerContribution implements FrontendApplicationContri
     initialize(): void {
         window.electronTheiaCore.setOpenUrlHandler(async url => {
             const uri = new URI(url);
-            try {
-                const handler = await this.openenerService.getOpener(uri);
-                if (handler) {
+            const handler = await this.openenerService.getOpener(uri);
+            if (handler) {
+                try {
                     await handler.open(uri);
                     return true;
+                } catch (e) {
+                    console.error(`Failed to open URI: ${url}`, e);
                 }
-            } catch (e) {
-                // no handler
             }
             return false;
         });
