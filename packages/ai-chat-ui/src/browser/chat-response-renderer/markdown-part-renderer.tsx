@@ -49,7 +49,7 @@ export interface MarkdownRenderProps {
  */
 export const MarkdownRender: React.FC<MarkdownRenderProps> = ({ text, openerService, className }) => {
     const ref = useMarkdownRendering(text, openerService);
-    return <div className={className} ref={ref}></div>;
+    return <div className={`theia-ChatProse${className ? ` ${className}` : ''}`} dir='auto' ref={ref}></div>;
 };
 
 @injectable()

@@ -22,7 +22,7 @@ import { expect } from 'chai';
 import * as React from '@theia/core/shared/react';
 import { createRoot, Root } from '@theia/core/shared/react-dom/client';
 import { OpenerService } from '@theia/core/lib/browser';
-import { DeclaredEventsEventListenerObject, useMarkdownRendering } from './markdown-part-renderer';
+import { DeclaredEventsEventListenerObject, MarkdownRender, useMarkdownRendering } from './markdown-part-renderer';
 import { BLOCKED_RESOURCE_ALLOW_CLASS, BLOCKED_RESOURCE_CLASS } from './block-external-resources';
 
 disableJSDOM();
@@ -58,6 +58,17 @@ describe('useMarkdownRendering', () => {
     afterEach(() => {
         root.unmount();
         document.body.removeChild(container);
+    });
+
+    it('lets each markdown message resolve its own text direction', done => {
+        root.render(<MarkdownRender text='سلام `src/index.ts`' openerService={openerService} />);
+
+        setTimeout(() => {
+            const markdown = container.firstElementChild;
+            expect(markdown?.getAttribute('dir')).to.equal('auto');
+            expect(markdown?.classList.contains('theia-ChatProse')).to.equal(true);
+            done();
+        }, 0);
     });
 
     it('blocks external markdown images before they are mounted', done => {

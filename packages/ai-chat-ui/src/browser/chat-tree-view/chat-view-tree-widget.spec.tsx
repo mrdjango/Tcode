@@ -86,6 +86,26 @@ describe('chat-view-tree-widget resource blocking policy', () => {
         }, 50);
     });
 
+    it('lets each user request resolve its own text direction', done => {
+        root.render(
+            <ChatRequestRender
+                node={createRequestNode('سلام `src/index.ts`')}
+                hoverService={{} as never}
+                chatAgentService={{} as never}
+                variableService={{} as never}
+                openerService={openerService}
+                provideChatInputWidget={() => undefined}
+            />
+        );
+
+        setTimeout(() => {
+            const prose = container.querySelector('.theia-RequestNode > p');
+            expect(prose?.getAttribute('dir')).to.equal('auto');
+            expect(prose?.classList.contains('theia-ChatProse')).to.equal(true);
+            done();
+        }, 50);
+    });
+
     it('still blocks active embedded content for user requests', done => {
         root.render(
             <ChatRequestRender

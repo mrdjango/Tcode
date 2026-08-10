@@ -23,6 +23,21 @@
   overflow-wrap: break-word;
 }
 
+.theia-ChatProse {
+  text-align: start;
+  unicode-bidi: plaintext;
+}
+
+.theia-ChatTechnical,
+.theia-ChatProse :is(pre, code, kbd, samp),
+.theia-ModelBadge,
+.theia-PromptVariantBadge,
+.theia-toolCall-args-label {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
 div:last-child>.theia-ChatNode {
   border: none;
 }

@@ -835,7 +835,7 @@ export const ChatRequestRender = (
 
     return (
         <div className="theia-RequestNode">
-            <p>
+            <p className='theia-ChatProse' dir='auto'>
                 {parts.map((part, index) => {
                     const resolvedInlineImage = inlineImageByIndex.get(index);
                     if (resolvedInlineImage) {
