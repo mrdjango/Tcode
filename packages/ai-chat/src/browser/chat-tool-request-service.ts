@@ -48,7 +48,10 @@ export class FrontendChatToolRequestService extends ChatToolRequestService {
 
                 switch (confirmationMode) {
                     case ToolConfirmationMode.DISABLED:
-                        return { denied: true, message: `Tool ${toolRequest.id} is disabled` };
+                        return {
+                            denied: true,
+                            reason: `Tool '${toolRequest.id}' is disabled. Open AI Configuration → Tools and set this tool to Confirm, then retry.`
+                        };
 
                     case ToolConfirmationMode.ALWAYS_ALLOW: {
                         const toolCallContentAlwaysAllow = this.findToolCallContent(toolRequest, arg_string, request, toolCallId);
