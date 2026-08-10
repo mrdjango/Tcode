@@ -165,7 +165,9 @@ export class GoogleModel implements LanguageModel {
         public reasoningSupport?: ReasoningSupport,
         public reasoningApi?: ReasoningApi,
         public maxInputTokens?: number,
-        public serverTools?: ServerToolDescriptor[]
+        public serverTools?: ServerToolDescriptor[],
+        public baseURL?: string,
+        public apiVersion?: string,
     ) { }
 
     protected getSettings(request: LanguageModelRequest): Readonly<Record<string, unknown>> {
@@ -565,7 +567,7 @@ export class GoogleModel implements LanguageModel {
         }
 
         // TODO test vertexai
-        return new GoogleGenAI({ apiKey, vertexai: false });
+        return new GoogleGenAI({ apiKey, vertexai: false, httpOptions: { baseUrl: this.baseURL, apiVersion: this.apiVersion } });
     }
 
     /**

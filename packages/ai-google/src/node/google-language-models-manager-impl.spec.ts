@@ -146,6 +146,15 @@ describe('GoogleLanguageModelsManagerImpl - fetchModelInfo cache', () => {
         expect(manager.retrieveCalls).to.deep.equal(['gemini-3-pro', 'gemini-2.5-pro']);
     });
 
+    it('does not share model lookup cache entries across custom endpoints', async () => {
+        manager.stubbedInfo = { thinking: true } as unknown as Model;
+        const first = { ...description('gemini-2.5-pro'), baseURL: 'https://api.tensorgrid.space', apiVersion: 'v1beta' };
+        const second = { ...description('gemini-2.5-pro'), baseURL: 'https://another.example', apiVersion: 'v1beta' };
+        await manager.callFetchModelInfo(first, 'key');
+        await manager.callFetchModelInfo(second, 'key');
+        expect(manager.retrieveCalls).to.deep.equal(['gemini-2.5-pro', 'gemini-2.5-pro']);
+    });
+
     it('does not cache failures (next call retries)', async () => {
         manager.stubbedInfo = new Error('boom');
         const desc = description('gemini-3-pro');
