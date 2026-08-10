@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
  *****************************************************************************/
-import { OpenAiModelDescription } from '@theia/ai-openai/lib/common/openai-language-models-manager';
+import { OpenAiModelDescription } from './openai-language-models-manager';
 
 export const TENSORGRID_DEFAULT_BASE_URL = 'https://api.tensorgrid.space/v1';
 

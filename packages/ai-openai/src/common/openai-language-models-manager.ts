@@ -29,6 +29,8 @@ export interface OpenAiModelDescription {
     url?: string;
     /** The key for the model. If `true` is provided the global OpenAI API key will be used. */
     apiKey: string | true | undefined;
+    /** Whether the model requires a verified provider credential before it can be used. */
+    requiresAuthentication?: boolean;
     /** The version for the api. If `true` is provided the global OpenAI version will be used. */
     apiVersion: string | true | undefined;
     /** Optional deployment name for Azure OpenAI. */

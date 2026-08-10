@@ -118,7 +118,8 @@ export class OpenAiModel implements LanguageModel {
         public serverTools?: ServerToolDescriptor[],
         public serverSideCompactionSupport: boolean = false,
         public serverSideCompactionEnabledByDefault: boolean = false,
-        public serverSideCompactionTokenThresholdByDefault?: number
+        public serverSideCompactionTokenThresholdByDefault?: number,
+        public requiresAuthentication: boolean = false
     ) { }
 
     /** Reasoning-level translation lives in {@link openAiReasoningFor}. */
@@ -130,6 +131,9 @@ export class OpenAiModel implements LanguageModel {
     }
 
     async request(request: UserRequest, cancellationToken?: CancellationToken): Promise<LanguageModelResponse> {
+        if (this.requiresAuthentication && !this.apiKey()) {
+            throw new Error('Sign in to TensorGrid before using this model.');
+        }
         const openai = this.initializeOpenAi();
 
         return this.useResponseApi ?

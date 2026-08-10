@@ -11,7 +11,8 @@ import { FrontendApplicationContribution } from '@theia/core/lib/browser';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import { PreferenceService } from '@theia/core';
-import { TensorGridAuthService, TCODE_BASE_URL_PREF, TCODE_ENABLED_PREF } from '../common';
+import { TensorGridAuthService } from '../common';
+import { TCODE_BASE_URL_PREF, TCODE_ENABLED_PREF } from '../common/openai-preferences';
 import { TensorGridStartupGate } from './tensorgrid-startup-gate';
 
 @injectable()

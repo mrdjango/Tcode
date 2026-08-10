@@ -23,6 +23,10 @@ class TestableOpenAiLanguageModelsManagerImpl extends OpenAiLanguageModelsManage
     resolveServerToolsForTest(description: OpenAiModelDescription): typeof OPENAI_SERVER_TOOLS | undefined {
         return this.resolveServerTools(description);
     }
+
+    calculateStatusForTest(description: OpenAiModelDescription, apiKey: string | undefined): ReturnType<OpenAiLanguageModelsManagerImpl['calculateStatus']> {
+        return this.calculateStatus(description, apiKey);
+    }
 }
 
 function modelDescription(overrides: Partial<OpenAiModelDescription> = {}): OpenAiModelDescription {
@@ -53,5 +57,12 @@ describe('OpenAiLanguageModelsManagerImpl server tools', () => {
 
     it('does not offer native web search without the Response API', () => {
         expect(manager.resolveServerToolsForTest(modelDescription())).to.equal(undefined);
+    });
+
+    it('marks authentication-required models unavailable without an API key', () => {
+        expect(manager.calculateStatusForTest(modelDescription({ requiresAuthentication: true }), undefined)).to.deep.equal({
+            status: 'unavailable',
+            message: 'Sign in to TensorGrid to use this model'
+        });
     });
 });

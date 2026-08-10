@@ -15,13 +15,14 @@
 // *****************************************************************************
 
 import { ContainerModule } from '@theia/core/shared/inversify';
-import { OPENAI_LANGUAGE_MODELS_MANAGER_PATH, OpenAiLanguageModelsManager } from '../common/openai-language-models-manager';
+import { OPENAI_LANGUAGE_MODELS_MANAGER_PATH, OpenAiLanguageModelsManager, TENSORGRID_AUTH_SERVICE_PATH, TensorGridAuthService } from '../common';
 import { ConnectionHandler, PreferenceContribution, RpcConnectionHandler } from '@theia/core';
 import { OpenAiLanguageModelsManagerImpl } from './openai-language-models-manager-impl';
 import { ConnectionContainerModule } from '@theia/core/lib/node/messaging/connection-container-module';
 import { OpenAiModelUtils } from './openai-language-model';
 import { OpenAiResponseApiUtils } from './openai-response-api-utils';
 import { OpenAiPreferencesSchema } from '../common/openai-preferences';
+import { TensorGridAuthServiceImpl } from './tensorgrid-auth-service-impl';
 
 export const OpenAiModelFactory = Symbol('OpenAiModelFactory');
 
@@ -31,6 +32,11 @@ const openAiConnectionModule = ConnectionContainerModule.create(({ bind, bindBac
     bind(OpenAiLanguageModelsManager).toService(OpenAiLanguageModelsManagerImpl);
     bind(ConnectionHandler).toDynamicValue(ctx =>
         new RpcConnectionHandler(OPENAI_LANGUAGE_MODELS_MANAGER_PATH, () => ctx.container.get(OpenAiLanguageModelsManager))
+    ).inSingletonScope();
+    bind(TensorGridAuthServiceImpl).toSelf().inSingletonScope();
+    bind(TensorGridAuthService).toService(TensorGridAuthServiceImpl);
+    bind(ConnectionHandler).toDynamicValue(ctx =>
+        new RpcConnectionHandler(TENSORGRID_AUTH_SERVICE_PATH, () => ctx.container.get(TensorGridAuthService))
     ).inSingletonScope();
 });
 

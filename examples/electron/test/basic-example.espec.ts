@@ -81,6 +81,6 @@ describe('basic-example-spec', function (): void {
         await mainWindow.loadURL(url);
 
         const title = mainWindow.webContents.getTitle();
-        expect(title).to.include('Theia Electron Example');
+        expect(title).to.include('tcode');
     });
 });

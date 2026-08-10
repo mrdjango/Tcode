@@ -17,9 +17,10 @@
 import { FrontendApplicationContribution } from '@theia/core/lib/browser';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import { ReasoningSupport, resolveCompactionDefault, resolveCompactionTokenThresholdDefault, ServerSideCompactionSetting } from '@theia/ai-core';
-import { OpenAiLanguageModelsManager, OpenAiModelDescription, OPENAI_PROVIDER_ID } from '../common';
+import { createTensorGridModelDescription, OpenAiLanguageModelsManager, OpenAiModelDescription, OPENAI_PROVIDER_ID, TensorGridAuthService } from '../common';
 import {
-    API_KEY_PREF, CUSTOM_ENDPOINTS_PREF, MODELS_PREF, SERVER_SIDE_COMPACTION_PREF, SERVER_SIDE_COMPACTION_TOKEN_THRESHOLD_PREF, USE_RESPONSE_API_PREF
+    API_KEY_PREF, CUSTOM_ENDPOINTS_PREF, MODELS_PREF, SERVER_SIDE_COMPACTION_PREF, SERVER_SIDE_COMPACTION_TOKEN_THRESHOLD_PREF, TCODE_BASE_URL_PREF,
+    TCODE_ENABLED_PREF, TCODE_MODELS_PREF, USE_RESPONSE_API_PREF
 } from '../common/openai-preferences';
 import {
     AICorePreferences, PREFERENCE_NAME_MAX_RETRIES, PREFERENCE_NAME_SERVER_SIDE_COMPACTION, PREFERENCE_NAME_SERVER_SIDE_COMPACTION_TOKEN_THRESHOLD
@@ -35,11 +36,33 @@ export class OpenAiFrontendApplicationContribution implements FrontendApplicatio
     @inject(OpenAiLanguageModelsManager)
     protected manager: OpenAiLanguageModelsManager;
 
+    @inject(TensorGridAuthService)
+    protected readonly authService: TensorGridAuthService;
+
+    protected async updateTensorGridCredential(): Promise<void> {
+        const authState = await this.authService.getAuthState();
+        this.tensorGridApiKey = authState.isAuthenticated ? await this.authService.getApiKey() : undefined;
+        if (authState.isAuthenticated) {
+            try {
+                this.tensorGridModels = await this.authService.getModelIds();
+            } catch (error) {
+                this.tensorGridModels = [];
+                console.warn('TensorGrid: failed to discover available models:', error);
+            }
+        } else {
+            this.tensorGridModels = [];
+        }
+        this.updateTCodeModels();
+    }
+
     @inject(AICorePreferences)
     protected aiCorePreferences: AICorePreferences;
 
     protected prevModels: string[] = [];
     protected prevCustomModels: Partial<OpenAiModelDescription>[] = [];
+    protected prevTCodeModels: string[] = [];
+    protected tensorGridApiKey: string | undefined;
+    protected tensorGridModels: string[] = [];
 
     onStart(): void {
         this.preferenceService.ready.then(() => {
@@ -56,6 +79,10 @@ export class OpenAiFrontendApplicationContribution implements FrontendApplicatio
             const customModels = this.preferenceService.get<Partial<OpenAiModelDescription>[]>(CUSTOM_ENDPOINTS_PREF, []);
             this.manager.createOrUpdateLanguageModels(...this.createCustomModelDescriptionsFromPreferences(customModels));
             this.prevCustomModels = [...customModels];
+            this.updateTCodeModels();
+            this.prevTCodeModels = this.getTCodeModels();
+            void this.updateTensorGridCredential();
+            this.authService.onAuthStateChanged(() => void this.updateTensorGridCredential());
 
             this.preferenceService.onPreferenceChanged(event => {
                 if (event.preferenceName === API_KEY_PREF) {
@@ -65,6 +92,8 @@ export class OpenAiFrontendApplicationContribution implements FrontendApplicatio
                     this.handleModelChanges(this.preferenceService.get<string[]>(MODELS_PREF, []));
                 } else if (event.preferenceName === CUSTOM_ENDPOINTS_PREF) {
                     this.handleCustomModelChanges(this.preferenceService.get<Partial<OpenAiModelDescription>[]>(CUSTOM_ENDPOINTS_PREF, []));
+                } else if (event.preferenceName === TCODE_ENABLED_PREF || event.preferenceName === TCODE_BASE_URL_PREF || event.preferenceName === TCODE_MODELS_PREF) {
+                    this.updateTCodeModels();
                 } else if (event.preferenceName === USE_RESPONSE_API_PREF) {
                     this.updateAllModels();
                 } else if (event.preferenceName === SERVER_SIDE_COMPACTION_PREF) {
@@ -131,6 +160,25 @@ export class OpenAiFrontendApplicationContribution implements FrontendApplicatio
 
         const customModels = this.preferenceService.get<Partial<OpenAiModelDescription>[]>(CUSTOM_ENDPOINTS_PREF, []);
         this.manager.createOrUpdateLanguageModels(...this.createCustomModelDescriptionsFromPreferences(customModels));
+        this.updateTCodeModels();
+    }
+
+    protected getTCodeModels(): string[] {
+        const configuredModels = this.preferenceService.get<string[]>(TCODE_MODELS_PREF, []);
+        return (configuredModels.length > 0 ? configuredModels : this.tensorGridModels)
+            .map(model => model.replace(/^tensorgrid\//, ''));
+    }
+
+    protected updateTCodeModels(): void {
+        const modelIds = this.getTCodeModels();
+        const enabled = this.preferenceService.get<boolean>(TCODE_ENABLED_PREF, true);
+        const baseUrl = this.preferenceService.get<string>(TCODE_BASE_URL_PREF);
+        const models = enabled ? modelIds.map(model => createTensorGridModelDescription(model, baseUrl, this.tensorGridApiKey)) : [];
+        const currentIds = new Set(modelIds.map(model => `tensorgrid/${model}`));
+        const previousIds = new Set(this.prevTCodeModels.map(model => `tensorgrid/${model}`));
+        this.manager.removeLanguageModels(...[...previousIds].filter(id => !currentIds.has(id) || !enabled));
+        this.manager.createOrUpdateLanguageModels(...models);
+        this.prevTCodeModels = enabled ? [...modelIds] : [];
     }
 
     /** Per-model capabilities are resolved by the backend from the model id; see `openai-model-defaults.ts`. */

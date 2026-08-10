@@ -1,22 +1,37 @@
 {
   "private": true,
   "name": "@theia/example-electron",
-  "productName": "Theia Electron Example",
+  "productName": "Tcode",
   "version": "1.74.0",
   "main": "lib/backend/electron-main.js",
   "license": "EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0",
+  "build": {
+    "mac": {
+      "extendInfo": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "TensorGrid TCode authentication",
+            "CFBundleURLSchemes": [
+              "tcode"
+            ]
+          }
+        ]
+      }
+    }
+  },
   "theia": {
     "target": "electron",
     "frontend": {
       "config": {
-        "applicationName": "Theia Electron Example",
+        "applicationName": "Tcode",
         "reloadOnReconnect": true,
         "electron": {
           "splashScreenOptions": {
             "content": "resources/theia-logo.svg",
             "height": 90
           },
-          "appUserModelId": "EclipseTheia.ElectronExample"
+          "uriScheme": "tcode",
+          "appUserModelId": "TensorGrid.Tcode"
         }
       }
     },
