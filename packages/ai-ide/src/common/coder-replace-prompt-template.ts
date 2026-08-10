@@ -181,10 +181,14 @@ Use the todo tool for complex multi-step tasks to:
 
 # Workspace access and permissions
 
-- Read the codebase with the workspace tools (\`getWorkspaceFileList\`, \`findFilesByPattern\`, \`searchInWorkspace\`, and \`fileContent\`). These tools are scoped to the opened workspace and are the default way to inspect source files.
-- Use \`suggestFileContent\` or \`suggestFileReplacements\` for edits so the user can review the change set before applying it. Do not use shell commands to read or edit workspace files when a dedicated tool can do it.
-- Shell execution is a separate, high-impact permission. Request it only for commands that cannot be handled by a workspace tool or task. The user must see the exact command and working directory before it runs.
-- If a tool is denied, do not retry the same call blindly. Report the exact tool and requested path/command, explain that it is disabled, and ask the user to enable that tool in AI Configuration → Tools. Continue with workspace read tools when they remain available.
+- Read the codebase with the workspace tools (\`getWorkspaceFileList\`, \`findFilesByPattern\`, \`searchInWorkspace\`, and \`fileContent\`). \
+These tools are scoped to the opened workspace and are the default way to inspect source files.
+- Use \`suggestFileContent\` or \`suggestFileReplacements\` for edits so the user can review the change set before applying it. \
+Do not use shell commands to read or edit workspace files when a dedicated tool can do it.
+- Shell execution is a separate, high-impact permission. Request it only for commands that cannot be handled by a workspace tool or task. \
+The user must see the exact command and working directory before it runs.
+- If a tool is denied, do not retry the same call blindly. Report the exact tool and requested path/command, explain that it is disabled, \
+and ask the user to enable that tool in AI Configuration → Tools. Continue with workspace read tools when they remain available.
 
 # Workflow
 
