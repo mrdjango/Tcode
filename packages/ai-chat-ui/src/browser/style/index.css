@@ -21,6 +21,70 @@
   -webkit-user-select: text;
   border-bottom: 1px solid var(--theia-sideBarSectionHeader-border);
   overflow-wrap: break-word;
+  box-sizing: border-box;
+  width: min(100%, 920px);
+  margin-inline: auto;
+}
+
+.theia-ChatNode-request {
+  align-items: flex-end;
+  border-block-end: 0;
+  padding-block: 10px 4px;
+}
+
+.theia-ChatNode-response {
+  padding-block: 8px 12px;
+}
+
+.theia-ChatNode-request>.theia-ChatNodeToolbar-request {
+  min-height: 22px;
+  order: 2;
+}
+
+.theia-ChatNode-request .theia-RequestNode {
+  align-self: flex-end;
+  max-width: min(85%, 720px);
+}
+
+.theia-ChatMessageBubble {
+  padding: 8px 12px;
+  border: 1px solid var(--theia-widget-border);
+  border-radius: 16px 16px 4px 16px;
+  background: var(--theia-editor-inactiveSelectionBackground);
+}
+
+.theia-ChatMessageBubble>p {
+  margin: 0;
+}
+
+.theia-ChatNode-response .theia-ChatNodeHeader {
+  height: auto;
+  min-height: 20px;
+  justify-content: flex-start;
+  color: var(--theia-descriptionForeground);
+}
+
+.theia-ChatNode-response .theia-AgentAvatar {
+  display: none;
+}
+
+.theia-ChatNode-response .theia-AgentLabel {
+  font-size: var(--theia-ui-font-size0);
+  font-weight: 500;
+}
+
+.theia-ChatNode:focus-within .theia-ChatNodeToolbar .theia-ChatNodeToolbarAction {
+  display: inline-block;
+}
+
+@media (max-width: 560px) {
+  .theia-ChatNode {
+    padding-inline: 12px;
+  }
+
+  .theia-ChatNode-request .theia-RequestNode {
+    max-width: 94%;
+  }
 }
 
 .theia-ChatProse {

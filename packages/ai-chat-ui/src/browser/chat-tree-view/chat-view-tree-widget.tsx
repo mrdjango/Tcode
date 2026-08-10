@@ -470,7 +470,7 @@ export class ChatViewTreeWidget extends TreeWidget {
             : nls.localize('theia/ai/chat-ui/responseFrom', 'Response from {0}', this.getAgentLabel(node));
         return <React.Fragment key={node.id}>
             <div
-                className='theia-ChatNode'
+                className={`theia-ChatNode ${isRequestNode(node) ? 'theia-ChatNode-request' : 'theia-ChatNode-response'}`}
                 role='article'
                 aria-label={ariaLabel}
                 onContextMenu={e => this.handleContextMenu(node, e)}
@@ -490,6 +490,33 @@ export class ChatViewTreeWidget extends TreeWidget {
                 .filter(action => this.commandRegistry.isEnabled(action.commandId, node))
                 .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
             : [];
+
+        if (isRequestNode(node)) {
+            return toolbarContributions.length > 0
+                ? <div className='theia-ChatNodeToolbar theia-ChatNodeToolbar-request'>
+                    {toolbarContributions.map(action =>
+                        <span
+                            key={action.commandId}
+                            className={`theia-ChatNodeToolbarAction ${action.icon}`}
+                            title={action.tooltip}
+                            aria-label={action.tooltip}
+                            tabIndex={0}
+                            onClick={e => {
+                                e.stopPropagation();
+                                this.commandRegistry.executeCommand(action.commandId, node);
+                            }}
+                            onKeyDown={e => {
+                                if (isEnterKey(e)) {
+                                    e.stopPropagation();
+                                    this.commandRegistry.executeCommand(action.commandId, node);
+                                }
+                            }}
+                            role='button'
+                        />
+                    )}
+                </div>
+                : undefined;
+        }
         const agentLabel = React.createRef<HTMLHeadingElement>();
         const agentDescription = this.getAgent(node)?.description;
 
@@ -834,7 +861,7 @@ export const ChatRequestRender = (
     };
 
     return (
-        <div className="theia-RequestNode">
+        <div className="theia-RequestNode theia-ChatMessageBubble">
             <p className='theia-ChatProse' dir='auto'>
                 {parts.map((part, index) => {
                     const resolvedInlineImage = inlineImageByIndex.get(index);

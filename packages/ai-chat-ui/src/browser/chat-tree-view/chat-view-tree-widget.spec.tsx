@@ -106,6 +106,25 @@ describe('chat-view-tree-widget resource blocking policy', () => {
         }, 50);
     });
 
+    it('renders user request content as a compact message bubble', done => {
+        root.render(
+            <ChatRequestRender
+                node={createRequestNode('A concise request')}
+                hoverService={{} as never}
+                chatAgentService={{} as never}
+                variableService={{} as never}
+                openerService={openerService}
+                provideChatInputWidget={() => undefined}
+            />
+        );
+
+        setTimeout(() => {
+            expect(container.querySelector('.theia-ChatMessageBubble')).to.exist;
+            expect(container.querySelector('.theia-AgentAvatar')).to.be.null;
+            done();
+        }, 0);
+    });
+
     it('still blocks active embedded content for user requests', done => {
         root.render(
             <ChatRequestRender
