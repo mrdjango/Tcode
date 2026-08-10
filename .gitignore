@@ -42,3 +42,4 @@ license-check-summary.txt*
 .tmp.cfg
 dist-arm64/
 graphify-out/
+.superpowers/
