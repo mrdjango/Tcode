@@ -1,6 +1,7 @@
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { FrontendApplicationContribution, OpenHandler, RemoteConnectionProvider, ServiceConnectionProvider } from '@theia/core/lib/browser';
 import { CommandContribution } from '@theia/core';
+import { LanguageModelSelectorMetadataProvider } from '@theia/ai-chat-ui/lib/browser/language-model-selector-metadata';
 import { TensorGridCatalogService, TENSORGRID_CATALOG_SERVICE_PATH } from '../common';
 import { TensorGridModelContribution } from './tensorgrid-model-contribution';
 import { TensorGridAuthUriHandler } from './tensorgrid-auth-uri-handler';
@@ -10,6 +11,7 @@ import '../../src/browser/style/tcode-chat.css';
 export default new ContainerModule(bind => {
     bind(TensorGridModelContribution).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(TensorGridModelContribution);
+    bind(LanguageModelSelectorMetadataProvider).toService(TensorGridModelContribution);
     bind(TensorGridAuthUriHandler).toSelf().inSingletonScope();
     bind(OpenHandler).toService(TensorGridAuthUriHandler);
     bind(TensorGridCommandContribution).toSelf().inSingletonScope();

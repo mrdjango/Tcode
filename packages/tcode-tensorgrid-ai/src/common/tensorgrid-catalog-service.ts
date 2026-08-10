@@ -10,6 +10,14 @@ export interface TensorGridCatalogModel {
     category: string;
     endpointTypes: string[];
     capabilities: Record<string, unknown>;
+    displayName?: string;
+    group?: {
+        id: string;
+        slug: string;
+        name: string;
+        ratio?: number;
+    };
+    ordering?: number;
 }
 export interface TensorGridAuthState { isAuthenticated: boolean; accountLabel?: string; }
 export interface TensorGridAuthRequest { authorizationUrl: string; }

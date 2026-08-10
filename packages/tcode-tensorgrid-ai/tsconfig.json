@@ -6,6 +6,7 @@
     { "path": "../ai-openai" },
     { "path": "../ai-anthropic" },
     { "path": "../ai-google" },
+    { "path": "../ai-chat-ui" },
     { "path": "../core" }
   ]
 }

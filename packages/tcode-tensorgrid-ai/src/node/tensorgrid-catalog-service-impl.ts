@@ -5,10 +5,85 @@ import { createCodeChallenge, createCodeVerifier, TensorGridAuthRequest, TensorG
 
 interface StoredCredentials { apiKey: string; accountLabel?: string; }
 interface PendingLogin { state: string; codeVerifier: string; }
-interface CatalogResponse { object?: string; data?: Array<{ id?: unknown; tensorgrid?: { category?: unknown; endpoint_types?: unknown; capabilities?: unknown } }> }
+interface CatalogResponse {
+    object?: string;
+    data?: Array<{
+        id?: unknown;
+        tensorgrid?: {
+            display_name?: unknown;
+            category?: unknown;
+            endpoint_types?: unknown;
+            capabilities?: unknown;
+            group?: unknown;
+            ordering?: unknown;
+        };
+    }>;
+}
 const KEYSTORE_SERVICE = 'theia-tcode';
 const KEYSTORE_ACCOUNT = 'tensorgrid-session';
 const KEYSTORE_PENDING_ACCOUNT = 'tensorgrid-pending-login';
+
+const nonEmptyString = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim() : undefined;
+
+export function parseTensorGridCatalogResponse(
+    payload: unknown,
+    warn: (message: string) => void = message => console.warn(message),
+): TensorGridCatalogModel[] {
+    const response = payload as CatalogResponse;
+    if (response?.object !== 'list' || !Array.isArray(response.data)) {
+        throw new Error('TensorGrid returned an invalid model catalog.');
+    }
+    return response.data.flatMap(row => {
+        const metadata = row.tensorgrid;
+        const id = nonEmptyString(row.id) ?? '';
+        if (!id || !metadata || typeof metadata.category !== 'string' || !Array.isArray(metadata.endpoint_types)
+            || !metadata.endpoint_types.every(value => typeof value === 'string')
+            || typeof metadata.capabilities !== 'object' || metadata.capabilities === null) {
+            warn(`TensorGrid: skipping '${id || 'unknown'}' because catalog metadata is invalid.`);
+            return [];
+        }
+        const model: TensorGridCatalogModel = {
+            id,
+            category: metadata.category,
+            endpointTypes: metadata.endpoint_types,
+            capabilities: metadata.capabilities as Record<string, unknown>,
+        };
+        const displayName = nonEmptyString(metadata.display_name);
+        if (displayName) {
+            model.displayName = displayName;
+        } else if (metadata.display_name !== undefined) {
+            warn(`TensorGrid: ignoring invalid display name for '${id}'.`);
+        }
+        if (metadata.group !== undefined) {
+            const group = metadata.group as { id?: unknown; slug?: unknown; name?: unknown; ratio?: unknown };
+            const groupId = nonEmptyString(group?.id);
+            const slug = nonEmptyString(group?.slug);
+            const name = nonEmptyString(group?.name);
+            if (groupId && slug && name) {
+                model.group = { id: groupId, slug, name };
+                if (group.ratio !== undefined && group.ratio !== null) {
+                    const ratio = typeof group.ratio === 'number' ? group.ratio : Number(group.ratio);
+                    if (Number.isFinite(ratio) && ratio >= 0) {
+                        model.group.ratio = ratio;
+                    } else {
+                        warn(`TensorGrid: ignoring invalid group ratio for '${id}'.`);
+                    }
+                }
+            } else {
+                warn(`TensorGrid: ignoring invalid group metadata for '${id}'.`);
+            }
+        }
+        if (metadata.ordering !== undefined && metadata.ordering !== null) {
+            if (typeof metadata.ordering === 'number' && Number.isInteger(metadata.ordering) && metadata.ordering >= 0) {
+                model.ordering = metadata.ordering;
+            } else {
+                warn(`TensorGrid: ignoring invalid ordering for '${id}'.`);
+            }
+        }
+        return [model];
+    });
+}
 
 @injectable()
 export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
@@ -65,18 +140,7 @@ export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
             throw new Error('TensorGrid authentication expired.');
         }
         if (!response.ok) { throw new Error(`TensorGrid catalog request failed (${response.status}).`); }
-        const payload = await response.json() as CatalogResponse;
-        if (payload.object !== 'list' || !Array.isArray(payload.data)) { throw new Error('TensorGrid returned an invalid model catalog.'); }
-        return payload.data.flatMap(row => {
-            const metadata = row.tensorgrid;
-            const id = typeof row.id === 'string' ? row.id.trim() : '';
-            if (!id || !metadata || typeof metadata.category !== 'string' || !Array.isArray(metadata.endpoint_types)
-                || !metadata.endpoint_types.every(value => typeof value === 'string') || typeof metadata.capabilities !== 'object' || metadata.capabilities === null) {
-                console.warn(`TensorGrid: skipping '${id || 'unknown'}' because catalog metadata is invalid.`);
-                return [];
-            }
-            return [{ id, category: metadata.category, endpointTypes: metadata.endpoint_types, capabilities: metadata.capabilities as Record<string, unknown> }];
-        });
+        return parseTensorGridCatalogResponse(await response.json());
     }
 
     async logout(): Promise<void> {
