@@ -47,7 +47,7 @@ import { ChatInputAgentSuggestions } from './chat-input-agent-suggestions';
 import { CHAT_VIEW_LANGUAGE_EXTENSION } from './chat-view-language-contribution';
 import { ContextVariablePicker } from './context-variable-picker';
 import { TASK_CONTEXT_VARIABLE } from '@theia/ai-chat/lib/browser/task-context-variable';
-import { IModelDeltaDecoration } from '@theia/monaco-editor-core/esm/vs/editor/common/model';
+import { IModelDeltaDecoration, TextDirection } from '@theia/monaco-editor-core/esm/vs/editor/common/model';
 import { EditorOption } from '@theia/monaco-editor-core/esm/vs/editor/common/config/editorOptions';
 import { SuggestController } from '@theia/monaco-editor-core/esm/vs/editor/contrib/suggest/browser/suggestController';
 import { ChatInputHistoryService, ChatInputNavigationState } from './chat-input-history';
@@ -90,6 +90,26 @@ type Cancel = (requestModel: ChatRequestModel) => void;
 type DeleteChangeSet = (requestModel: ChatRequestModel) => void;
 type DeleteChangeSetElement = (requestModel: ChatRequestModel, index: number) => void;
 type OpenContextElement = (request: AIVariableResolutionRequest) => unknown;
+
+const RTL_STRONG_CHARACTER = /[\u0590-\u08FF\uFB1D-\uFDFD\uFE70-\uFEFC]/;
+const LETTER_CHARACTER = /\p{Letter}/u;
+
+/**
+ * Determines a line's base direction using the Unicode bidirectional
+ * algorithm's first-strong-character rule. Numbers and punctuation do not
+ * choose a direction, so a line such as `123 - فایل` is still rendered RTL.
+ */
+export const getChatInputTextDirection = (value: string): TextDirection => {
+    for (const character of value) {
+        if (RTL_STRONG_CHARACTER.test(character)) {
+            return TextDirection.RTL;
+        }
+        if (LETTER_CHARACTER.test(character)) {
+            return TextDirection.LTR;
+        }
+    }
+    return TextDirection.LTR;
+};
 
 export const AIChatInputConfiguration = Symbol('AIChatInputConfiguration');
 export interface AIChatInputConfiguration {
@@ -2080,6 +2100,7 @@ const ChatInput: React.FunctionComponent<ChatInputProperties> = (props: ChatInpu
                             description: `line-number-${lineNumber}`,
                             isWholeLine: false,
                             className: `line-number-${lineNumber}`,
+                            textDirection: getChatInputTextDirection(model.getLineContent(lineNumber)),
                         }
                     });
                 }

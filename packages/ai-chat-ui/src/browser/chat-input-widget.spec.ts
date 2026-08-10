@@ -25,7 +25,8 @@ import 'reflect-metadata';
 
 import { expect } from 'chai';
 import { ParsedCapability } from '@theia/ai-core';
-import { AIChatInputWidget, getVisibleCapabilities } from './chat-input-widget';
+import { AIChatInputWidget, getChatInputTextDirection, getVisibleCapabilities } from './chat-input-widget';
+import { TextDirection } from '@theia/monaco-editor-core/esm/vs/editor/common/model';
 
 disableJSDOM();
 
@@ -93,6 +94,25 @@ describe('AIChatInputWidget', () => {
             const visible = getVisibleCapabilities(capabilities, new Map());
 
             expect(visible.map(capability => capability.fragmentId)).to.deep.equal(['shell']);
+        });
+    });
+
+    describe('input text direction', () => {
+        it('uses RTL when Persian is the first strong text, including inline technical terms', () => {
+            expect(getChatInputTextDirection('رو بررسی کن gitignore فایل')).to.equal(TextDirection.RTL);
+        });
+
+        it('uses LTR when Latin text is the first strong text', () => {
+            expect(getChatInputTextDirection('Review gitignore و نتیجه را بگو')).to.equal(TextDirection.LTR);
+        });
+
+        it('ignores punctuation and numbers before Persian text', () => {
+            expect(getChatInputTextDirection('123 - فایل را بررسی کن')).to.equal(TextDirection.RTL);
+        });
+
+        it('defaults empty and symbol-only lines to LTR', () => {
+            expect(getChatInputTextDirection('')).to.equal(TextDirection.LTR);
+            expect(getChatInputTextDirection('123 +-_')).to.equal(TextDirection.LTR);
         });
     });
 });
