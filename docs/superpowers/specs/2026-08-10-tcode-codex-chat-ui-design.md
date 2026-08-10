@@ -1,7 +1,7 @@
 # Tcode Codex-Inspired Chat UI Design
 
 Date: 2026-08-10
-Status: Pending written-spec review
+Status: Approved and implemented
 
 ## Goal
 
@@ -203,3 +203,12 @@ Implementation is divided into reviewable commits:
 2. Adaptive composer structure and capabilities menu behavior.
 3. Tcode-only Codex-inspired visual layer and responsive states.
 4. Tests, macOS ARM64 packaging verification, and maintenance documentation updates.
+
+## Implementation Verification
+
+- Semantic `dir="auto"` boundaries are applied to user and assistant prose; model IDs, prompt IDs, code, paths, tool names, arguments, and error details are isolated LTR.
+- User messages use compact logical-end bubbles; assistant messages remain flat with compact metadata and accessible article labels.
+- The collapsed composer shows only active capability chips; all other choices remain available behind the keyboard-accessible `+` control.
+- Completed tool output and provider details use native progressive disclosure; running and approval-required activity remains visible with live-status semantics.
+- Tcode loads a product-scoped adaptive stylesheet with narrow-panel wrapping, focus-visible states, and reduced-motion handling.
+- `@theia/ai-chat-ui` passes 274 tests; `@tcode/tensorgrid-ai` passes 3 tests. Both packages compile and lint successfully before packaging.
