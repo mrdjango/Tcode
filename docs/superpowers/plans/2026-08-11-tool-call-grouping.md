@@ -17,6 +17,8 @@
 - Completed groups default to collapsed; incomplete or interactive groups default to expanded.
 - Existing tool renderers, confirmation behavior, output, arguments, and response objects remain unchanged.
 - Main chat and delegated sub-chat use the same grouping implementation.
+- Renderer-declared standalone tool calls are never grouped or counted and split adjacent tool runs.
+- Tcode `todoWrite` and Codex `todo_list` renderers declare standalone behavior.
 - Logical CSS properties preserve LTR and RTL behavior.
 
 ---
@@ -210,7 +212,123 @@ git commit -m "feat(ai-chat-ui): collapse long tool call runs"
 
 ---
 
-### Task 3: Repository graph, Electron build, and macOS ARM64 bundle
+### Task 3: Keep Todo updates outside tool groups
+
+**Files:**
+- Modify: `packages/ai-chat-ui/src/browser/chat-response-part-renderer.ts`
+- Modify: `packages/ai-chat-ui/src/browser/chat-tree-view/chat-response-content-grouping.ts`
+- Test: `packages/ai-chat-ui/src/browser/chat-tree-view/chat-response-content-grouping.spec.ts`
+- Modify: `packages/ai-chat-ui/src/browser/chat-tree-view/chat-response-content-list.tsx`
+- Test: `packages/ai-chat-ui/src/browser/chat-tree-view/chat-response-content-list.spec.tsx`
+- Modify: `packages/ai-chat-ui/src/browser/chat-tree-view/chat-view-tree-widget.tsx`
+- Modify: `packages/ai-chat-ui/src/browser/chat-tree-view/sub-chat-widget.tsx`
+- Modify: `packages/ai-ide/src/browser/todo-tool-renderer.tsx`
+- Test: `packages/ai-ide/src/browser/todo-tool.spec.ts`
+- Modify: `packages/ai-codex/src/browser/renderers/todo-list-renderer.tsx`
+- Test: `packages/ai-codex/src/browser/renderers/todo-list-renderer.spec.tsx`
+
+**Interfaces:**
+- Produces: `ChatResponsePartRenderer.groupingBehavior?: 'standalone'`.
+- Extends: `groupChatResponseContent(content, isGroupableToolCall?)`, where the optional predicate defaults to grouping every client tool call.
+- Extends: `ChatResponseContentListProps.isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean`.
+- Consumes: the highest-priority renderer selected by each chat widget; a selected renderer with `groupingBehavior === 'standalone'` makes its tool call a grouping boundary.
+
+- [ ] **Step 1: Write failing pure grouping and component regressions**
+
+Add a fixture with three ordinary tools, one Todo tool, and three more ordinary tools. The pure test passes `tool => tool.name !== 'todoWrite'` and expects:
+
+```ts
+expect(groupChatResponseContent(content, tool => tool.name !== 'todoWrite').map(item => item.kind))
+    .to.deep.equal(['toolCallGroup', 'content', 'toolCallGroup']);
+expect(groupChatResponseContent(content, tool => tool.name !== 'todoWrite')
+    .filter(item => item.kind === 'toolCallGroup').map(item => item.content.length))
+    .to.deep.equal([3, 3]);
+```
+
+The component test supplies the same predicate, expects two `Ran 3 tools` summaries, and asserts the standalone Todo rendering remains present while both completed groups are collapsed.
+
+- [ ] **Step 2: Run focused tests and verify RED**
+
+```bash
+cd packages/ai-chat-ui
+npm run compile
+npm test -- --grep "standalone tool"
+```
+
+Expected: compile or assertions fail because the grouping predicate is not yet supported.
+
+- [ ] **Step 3: Implement the standalone renderer contract and grouping boundary**
+
+Add the optional policy without changing existing renderer defaults:
+
+```ts
+export interface ChatResponsePartRenderer<T extends ChatResponseContent = ChatResponseContent> {
+    readonly groupingBehavior?: 'standalone';
+    canHandle(content: ChatResponseContent): number;
+    render(content: T, parent: ResponseNode): React.ReactNode;
+}
+```
+
+Extend grouping so a rejected tool flushes the current run, is emitted as `kind: 'content'`, and does not enter the next run:
+
+```ts
+export function groupChatResponseContent(
+    content: readonly ChatResponseContent[],
+    isGroupableToolCall: (content: ToolCallChatResponseContent) => boolean = () => true
+): GroupedChatResponseContent[] {
+    content.forEach((item, sourceIndex) => {
+        if (ToolCallChatResponseContent.is(item) && isGroupableToolCall(item)) {
+            run.push({ content: item, sourceIndex });
+        } else {
+            flush();
+            result.push({ kind: 'content', content: item, sourceIndex });
+        }
+    });
+}
+```
+
+Pass the predicate through `ChatResponseContentList`. In both chat widgets, select the existing highest-priority renderer and return `false` only when its `groupingBehavior` is `standalone`.
+
+- [ ] **Step 4: Mark both Todo renderers standalone**
+
+Add the same explicit contract to the specialized Tcode and Codex renderers:
+
+```ts
+readonly groupingBehavior = 'standalone' as const;
+```
+
+Add focused renderer tests asserting that `TodoToolRenderer` and `TodoListRenderer` expose the standalone policy; retain their existing `canHandle` and rendering tests unchanged.
+
+- [ ] **Step 5: Run focused tests and verify GREEN**
+
+```bash
+cd packages/ai-chat-ui
+npm run compile
+npm test -- --grep "standalone tool"
+cd ../ai-ide
+npm run compile
+npm test -- --grep "TodoToolRenderer"
+cd ../ai-codex
+npm run compile
+npm test -- --grep "TodoListRenderer"
+```
+
+Expected: all focused tests pass and a Todo update is never included in either adjacent group count.
+
+- [ ] **Step 6: Run affected package verification**
+
+Run `npm run compile`, `npm run lint`, and `npm test` in `packages/ai-chat-ui`, `packages/ai-ide`, and `packages/ai-codex`. Expected: every command exits zero.
+
+- [ ] **Step 7: Commit the refinement**
+
+```bash
+git add packages/ai-chat-ui packages/ai-ide/src/browser/todo-tool-renderer.tsx packages/ai-ide/src/browser/todo-tool.spec.ts packages/ai-codex/src/browser/renderers/todo-list-renderer.tsx packages/ai-codex/src/browser/renderers/todo-list-renderer.spec.tsx
+git commit -m "fix(ai-chat-ui): keep todo updates outside tool groups"
+```
+
+---
+
+### Task 4: Repository graph, Electron build, and macOS ARM64 bundle
 
 **Files:**
 - Update the local graph with `graphify update .`; do not stage generated graph drift.
