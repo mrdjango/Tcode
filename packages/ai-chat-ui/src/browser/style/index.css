@@ -674,6 +674,98 @@ div:last-child>.theia-ChatNode {
   min-width: 0;
 }
 
+.theia-chat-approval-selector {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.theia-chat-approval-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 7px;
+    color: var(--theia-foreground);
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font: inherit;
+    white-space: nowrap;
+}
+
+.theia-chat-approval-trigger:hover,
+.theia-chat-approval-trigger[aria-expanded='true'] {
+    background: var(--theia-toolbar-hoverBackground);
+}
+
+.theia-chat-approval-trigger:disabled {
+    opacity: var(--theia-disabledOpacity);
+    cursor: default;
+}
+
+.theia-chat-approval-menu {
+    position: absolute;
+    z-index: 1000;
+    left: 0;
+    bottom: calc(100% + 8px);
+    width: min(430px, calc(100vw - 48px));
+    padding: 8px;
+    color: var(--theia-menu-foreground);
+    background: var(--theia-menu-background);
+    border: 1px solid var(--theia-menu-border, var(--theia-widget-border));
+    border-radius: 10px;
+    box-shadow: 0 8px 24px var(--theia-widget-shadow);
+}
+
+.theia-chat-approval-heading {
+    padding: 7px 10px 9px;
+    color: var(--theia-descriptionForeground);
+    font-size: var(--theia-ui-font-size1);
+}
+
+.theia-chat-approval-choice {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 20px;
+    width: 100%;
+    padding: 9px 10px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.theia-chat-approval-choice:hover,
+.theia-chat-approval-choice:focus-visible {
+    color: var(--theia-menu-selectionForeground);
+    background: var(--theia-menu-selectionBackground);
+    outline: none;
+}
+
+.theia-chat-approval-choice-icon,
+.theia-chat-approval-check {
+    margin-top: 2px;
+}
+
+.theia-chat-approval-choice-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.theia-chat-approval-choice-label {
+    font-weight: 500;
+}
+
+.theia-chat-approval-choice-description {
+    color: var(--theia-descriptionForeground);
+    font-size: var(--theia-ui-font-size0);
+    line-height: 1.35;
+}
+
 .theia-ChatInputOptions .theia-ChatInputOptions-right {
   margin-right: calc(var(--theia-ui-padding) * 4 / 3);
   /* Keep the token usage and send/stop button fully visible. */

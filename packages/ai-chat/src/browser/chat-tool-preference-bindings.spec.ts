@@ -19,6 +19,7 @@ import * as sinon from 'sinon';
 import { Container } from '@theia/core/shared/inversify';
 import { ToolConfirmationManager } from './chat-tool-preference-bindings';
 import {
+    ChatApprovalMode,
     DEFAULT_TOOL_CONFIRMATION_PREFERENCE,
     TOOL_CONFIRMATION_PREFERENCE,
     ToolConfirmationMode
@@ -123,6 +124,52 @@ describe('ToolConfirmationManager', () => {
             expect(aiConfigurationServiceMock.update.firstCall.args[0]).to.equal(DEFAULT_TOOL_CONFIRMATION_PREFERENCE);
             expect(aiConfigurationServiceMock.update.firstCall.args[1]).to.equal(ToolConfirmationMode.ALWAYS_ALLOW);
             expect(storedDefaultMode).to.equal(ToolConfirmationMode.ALWAYS_ALLOW);
+        });
+    });
+
+    describe('chat approval mode', () => {
+        it('reports ask-for-approval for a confirmation default without per-tool overrides', () => {
+            storedDefaultMode = ToolConfirmationMode.CONFIRM;
+
+            expect(manager.getApprovalMode()).to.equal(ChatApprovalMode.ASK);
+        });
+
+        it('reports approve-for-me for auto approval without per-tool overrides', () => {
+            storedDefaultMode = ToolConfirmationMode.ALWAYS_ALLOW;
+
+            expect(manager.getApprovalMode()).to.equal(ChatApprovalMode.AUTO);
+        });
+
+        it('reports custom when any per-tool override exists', () => {
+            storedDefaultMode = ToolConfirmationMode.ALWAYS_ALLOW;
+            storedPerToolPreferences.searchInWorkspace = ToolConfirmationMode.DISABLED;
+
+            expect(manager.getApprovalMode()).to.equal(ChatApprovalMode.CUSTOM);
+        });
+
+        it('switches to ask-for-approval and removes stale per-tool denials', async () => {
+            storedDefaultMode = ToolConfirmationMode.ALWAYS_ALLOW;
+            storedPerToolPreferences.searchInWorkspace = ToolConfirmationMode.DISABLED;
+
+            await manager.setApprovalMode(ChatApprovalMode.ASK);
+
+            expect(storedDefaultMode).to.equal(ToolConfirmationMode.CONFIRM);
+            expect(storedPerToolPreferences).to.deep.equal({});
+        });
+
+        it('switches to approve-for-me while sensitive tools still require confirmation', async () => {
+            storedDefaultMode = ToolConfirmationMode.CONFIRM;
+            storedPerToolPreferences.searchInWorkspace = ToolConfirmationMode.DISABLED;
+
+            await manager.setApprovalMode(ChatApprovalMode.AUTO);
+
+            expect(storedDefaultMode).to.equal(ToolConfirmationMode.ALWAYS_ALLOW);
+            expect(storedPerToolPreferences).to.deep.equal({});
+            expect(manager.getConfirmationMode('searchInWorkspace', 'chat-1')).to.equal(ToolConfirmationMode.ALWAYS_ALLOW);
+            expect(manager.getConfirmationMode('shellExecute', 'chat-1', createToolRequest('shellExecute', true)))
+                .to.equal(ToolConfirmationMode.CONFIRM);
+            expect(manager.getConfirmationMode('mcp_untrusted_remote_tool', 'chat-1'))
+                .to.equal(ToolConfirmationMode.CONFIRM);
         });
     });
 

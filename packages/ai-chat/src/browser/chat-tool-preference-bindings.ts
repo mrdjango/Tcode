@@ -16,6 +16,7 @@
 
 import { injectable, inject } from '@theia/core/shared/inversify';
 import {
+    ChatApprovalMode,
     ToolConfirmationMode,
     TOOL_CONFIRMATION_PREFERENCE,
     DEFAULT_TOOL_CONFIRMATION_PREFERENCE
@@ -64,6 +65,38 @@ export class ToolConfirmationManager {
         return this.aiConfigurationService.update(DEFAULT_TOOL_CONFIRMATION_PREFERENCE, mode);
     }
 
+    /** Returns the user-facing approval policy represented by the low-level preferences. */
+    getApprovalMode(): ChatApprovalMode {
+        if (Object.keys(this.getAllConfirmationSettings()).length > 0) {
+            return ChatApprovalMode.CUSTOM;
+        }
+        switch (this.getDefaultConfirmationMode()) {
+            case ToolConfirmationMode.CONFIRM:
+                return ChatApprovalMode.ASK;
+            case ToolConfirmationMode.ALWAYS_ALLOW:
+                return ChatApprovalMode.AUTO;
+            case ToolConfirmationMode.DISABLED:
+            default:
+                return ChatApprovalMode.CUSTOM;
+        }
+    }
+
+    /**
+     * Applies a high-level policy and clears stale per-tool overrides so the selected
+     * policy takes effect consistently. Custom mode is configured in the Tools view.
+     */
+    async setApprovalMode(mode: ChatApprovalMode): Promise<void> {
+        if (mode === ChatApprovalMode.CUSTOM) {
+            return;
+        }
+        const confirmationMode = mode === ChatApprovalMode.ASK
+            ? ToolConfirmationMode.CONFIRM
+            : ToolConfirmationMode.ALWAYS_ALLOW;
+        await this.setDefaultConfirmationMode(confirmationMode);
+        await this.resetAllConfirmationModeSettings();
+        this.clearSessionOverrides();
+    }
+
     /**
      * Get the confirmation mode for a specific tool, considering session overrides first (per chat).
      *
@@ -87,8 +120,8 @@ export class ToolConfirmationManager {
             return toolConfirmation[toolId];
         }
         const defaultMode = this.getDefaultConfirmationMode();
-        // For confirmAlwaysAllow tools, don't inherit a global ALWAYS_ALLOW default
-        if (toolRequest?.confirmAlwaysAllow && defaultMode === ToolConfirmationMode.ALWAYS_ALLOW) {
+        // Sensitive and third-party MCP tools don't inherit global auto-approval.
+        if (this.requiresExplicitApproval(toolId, toolRequest) && defaultMode === ToolConfirmationMode.ALWAYS_ALLOW) {
             return ToolConfirmationMode.CONFIRM;
         }
         return defaultMode;
@@ -207,10 +240,14 @@ export class ToolConfirmationManager {
         if (perToolDefault) {
             return perToolDefault;
         }
-        if (toolRequest?.confirmAlwaysAllow && defaults.globalDefault === ToolConfirmationMode.ALWAYS_ALLOW) {
+        if (this.requiresExplicitApproval(toolId, toolRequest) && defaults.globalDefault === ToolConfirmationMode.ALWAYS_ALLOW) {
             return ToolConfirmationMode.CONFIRM;
         }
         return defaults.globalDefault;
+    }
+
+    protected requiresExplicitApproval(toolId: string, toolRequest?: ToolRequest): boolean {
+        return !!toolRequest?.confirmAlwaysAllow || toolId.startsWith('mcp_');
     }
 
     /**

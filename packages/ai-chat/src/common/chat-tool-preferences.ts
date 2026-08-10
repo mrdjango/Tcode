@@ -53,6 +53,13 @@ export enum ToolConfirmationMode {
     DISABLED = 'disabled'
 }
 
+/** High-level approval policies exposed in the chat input. */
+export enum ChatApprovalMode {
+    ASK = 'ask',
+    AUTO = 'auto',
+    CUSTOM = 'custom'
+}
+
 export const TOOL_CONFIRMATION_PREFERENCE = 'ai-features.chat.toolConfirmation';
 export const DEFAULT_TOOL_CONFIRMATION_PREFERENCE = 'ai-features.chat.defaultToolConfirmation';
 export const TOOL_CONFIRMATION_TIMEOUT_PREFERENCE = 'ai-features.chat.toolConfirmationTimeout';

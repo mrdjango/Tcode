@@ -75,6 +75,13 @@ import {
     getUsageColorClass
 } from './chat-token-usage-indicator-util';
 import { AI_CHAT_HOME, ChatCommands } from './chat-view-commands';
+import {
+    ChatApprovalMode,
+    DEFAULT_TOOL_CONFIRMATION_PREFERENCE,
+    TOOL_CONFIRMATION_PREFERENCE
+} from '@theia/ai-chat/lib/common/chat-tool-preferences';
+import { ToolConfirmationManager } from '@theia/ai-chat/lib/browser/chat-tool-preference-bindings';
+import { ChatApprovalModeSelector } from './chat-approval-mode-selector';
 
 type Query = (query: string, mode?: string, capabilityOverrides?: Record<string, boolean>, genericCapabilitySelections?: GenericCapabilitySelections,
     serverToolSelections?: Record<string, string[]>) => Promise<void>;
@@ -190,6 +197,9 @@ export class AIChatInputWidget extends ReactWidget {
 
     @inject(CommandService)
     protected readonly commandService: CommandService;
+
+    @inject(ToolConfirmationManager)
+    protected readonly toolConfirmationManager: ToolConfirmationManager;
 
     protected tokenUsageEnabled = false;
     /** Sessions we have already notified for the current warning cycle (re-armed when usage drops below the threshold). */
@@ -1058,6 +1068,9 @@ export class AIChatInputWidget extends ReactWidget {
                     // evaluate now so they get an immediate notification instead of waiting for
                     // the next response.
                     this.evaluateTokenUsageWarning(this._chatModel);
+                } else if (change.preferenceName === DEFAULT_TOOL_CONFIRMATION_PREFERENCE
+                    || change.preferenceName === TOOL_CONFIRMATION_PREFERENCE) {
+                    this.update();
                 }
             }));
         }
@@ -1108,6 +1121,22 @@ export class AIChatInputWidget extends ReactWidget {
         this.chatInputReceivingAgentKey = this.contextKeyService.createKey<string>('chatInputReceivingAgent', '');
         this.chatInputHasModesKey = this.contextKeyService.createKey<boolean>('chatInputHasModes', false);
     }
+
+    protected handleApprovalModeChange = async (mode: ChatApprovalMode): Promise<void> => {
+        try {
+            await this.toolConfirmationManager.setApprovalMode(mode);
+            this.update();
+        } catch (error) {
+            this.logger.error('Failed to update the chat approval mode', error);
+            this.messageService.error(nls.localize('theia/ai/chat-ui/approval/updateFailed', 'Could not update action approval settings.'));
+        }
+    };
+
+    protected openToolPermissionConfiguration = (): void => {
+        this.commandService.executeCommand('aiConfiguration:openTools').catch(error => {
+            this.logger.error('Failed to open AI tool permission configuration', error);
+        });
+    };
 
     updateCursorPositionKeys(): void {
         if (!this.editorRef) {
@@ -1506,6 +1535,11 @@ export class AIChatInputWidget extends ReactWidget {
                     onReasoningChange: this.handleReasoningChange,
                 }}
                 modelSelectorProps={this.getModelSelectorProps()}
+                approvalModeProps={{
+                    mode: this.toolConfirmationManager.getApprovalMode(),
+                    onModeChange: this.handleApprovalModeChange,
+                    onConfigure: this.openToolPermissionConfiguration
+                }}
                 capabilitiesProps={{
                     capabilities: this.capabilityDefaults,
                     overrides: this.userCapabilityOverrides,
@@ -1860,6 +1894,11 @@ interface ChatInputProperties {
         onReasoningChange: (level: ReasoningLevel) => void;
     };
     modelSelectorProps: ModelSelectorWidgetProps;
+    approvalModeProps: {
+        mode: ChatApprovalMode;
+        onModeChange: (mode: ChatApprovalMode) => void | Promise<void>;
+        onConfigure: () => void;
+    };
     capabilitiesProps: {
         capabilities: ParsedCapability[];
         overrides: Map<string, boolean>;
@@ -2374,6 +2413,7 @@ const ChatInput: React.FunctionComponent<ChatInputProperties> = (props: ChatInpu
                         onReasoningChange: props.reasoningSelectorProps.onReasoningChange,
                     }}
                     modelSelectorProps={props.modelSelectorProps}
+                    approvalModeProps={props.approvalModeProps}
                     capabilitiesToggle={{
                         show: props.showCapabilities !== false,
                         isOpen: props.capabilitiesProps.isOpen,
@@ -2427,6 +2467,11 @@ interface ChatInputOptionsProps {
         onReasoningChange: (level: ReasoningLevel) => void;
     };
     modelSelectorProps: ModelSelectorWidgetProps;
+    approvalModeProps: {
+        mode: ChatApprovalMode;
+        onModeChange: (mode: ChatApprovalMode) => void | Promise<void>;
+        onConfigure: () => void;
+    };
     capabilitiesToggle: {
         show: boolean;
         isOpen: boolean;
@@ -2446,6 +2491,7 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
     modeSelectorProps,
     reasoningSelectorProps,
     modelSelectorProps,
+    approvalModeProps,
     capabilitiesToggle
 }) => {
     const capabilitiesLabel = nls.localize('theia/ai/chat-ui/toggleCapabilitiesConfig', 'Toggle Capabilities Configuration');
@@ -2515,6 +2561,12 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
                         <span className={`codicon ${option.className}`} />
                     </span>
                 ))}
+                <ChatApprovalModeSelector
+                    mode={approvalModeProps.mode}
+                    onModeChange={approvalModeProps.onModeChange}
+                    onConfigure={approvalModeProps.onConfigure}
+                    disabled={!isEnabled}
+                />
                 {modeSelectorProps.show && modeSelectorProps.modes && (
                     <ChatModeSelector
                         modes={modeSelectorProps.modes}
