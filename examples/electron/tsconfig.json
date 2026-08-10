@@ -198,6 +198,9 @@
       "path": "../../packages/task"
     },
     {
+      "path": "../../packages/tcode-tensorgrid-ai"
+    },
+    {
       "path": "../../packages/telemetry"
     },
     {

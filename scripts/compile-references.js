@@ -33,11 +33,12 @@ const path = require('path');
 const fs = require('fs');
 
 const ROOT = path.join(__dirname, '..');
+const LERNA = path.join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'lerna.cmd' : 'lerna');
 
 const FORCE_REWRITE = process.argv.includes('--force-rewrite');
 
-const PACKAGE_LIST = JSON.parse(cp.execSync('npx lerna ls --loglevel=silent --all --json', { cwd: ROOT }).toString());
-const DEPENDENCIES = JSON.parse(cp.execSync('npx lerna ls --loglevel=silent --all --graph', { cwd: ROOT }).toString());
+const PACKAGE_LIST = JSON.parse(cp.execFileSync(LERNA, ['ls', '--loglevel=silent', '--all', '--json'], { cwd: ROOT }).toString());
+const DEPENDENCIES = JSON.parse(cp.execFileSync(LERNA, ['ls', '--loglevel=silent', '--all', '--graph'], { cwd: ROOT }).toString());
 
 compileTypeScriptReferences().catch(error => {
     console.error(error);

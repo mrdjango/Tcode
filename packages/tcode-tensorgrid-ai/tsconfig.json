@@ -1,12 +1,28 @@
 {
   "extends": "../../configs/base.tsconfig",
-  "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "lib" },
-  "include": ["src"],
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "include": [
+    "src"
+  ],
   "references": [
-    { "path": "../ai-openai" },
-    { "path": "../ai-anthropic" },
-    { "path": "../ai-google" },
-    { "path": "../ai-chat-ui" },
-    { "path": "../core" }
+    {
+      "path": "../ai-anthropic"
+    },
+    {
+      "path": "../ai-chat-ui"
+    },
+    {
+      "path": "../ai-google"
+    },
+    {
+      "path": "../ai-openai"
+    },
+    {
+      "path": "../core"
+    }
   ]
 }
