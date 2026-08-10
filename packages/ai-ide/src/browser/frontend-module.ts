@@ -17,7 +17,7 @@
 import '../../src/browser/style/index.css';
 
 import { ContainerModule } from '@theia/core/shared/inversify';
-import { ChatAgent, ChatAgentRecommendationService } from '@theia/ai-chat/lib/common';
+import { ChatAgent, ChatAgentRecommendationService, DefaultChatAgentId, FallbackChatAgentId } from '@theia/ai-chat/lib/common';
 import { Agent, AIVariableContribution, bindToolProvider } from '@theia/ai-core/lib/common';
 import { ArchitectAgent } from './architect-agent';
 import { CoderAgent } from './coder-agent';
@@ -62,7 +62,7 @@ import {
     ReplaceContentInFileFunctionHelperV2
 } from './file-changeset-functions';
 import { OrchestratorChatAgent } from '../common/orchestrator-chat-agent';
-import { UniversalChatAgent } from '../common/universal-chat-agent';
+import { UniversalChatAgent, UniversalChatAgentId } from '../common/universal-chat-agent';
 import { AppTesterChatAgent } from './app-tester-chat-agent';
 import { GitHubChatAgent } from './github-chat-agent';
 import { CommandChatAgent } from '../common/command-chat-agents';
@@ -170,6 +170,8 @@ export default new ContainerModule((bind, _unbind, _isBound, rebind) => {
     bind(UniversalChatAgent).toSelf().inSingletonScope();
     bind(Agent).toService(UniversalChatAgent);
     bind(ChatAgent).toService(UniversalChatAgent);
+    bind(DefaultChatAgentId).toConstantValue({ id: UniversalChatAgentId });
+    bind(FallbackChatAgentId).toConstantValue({ id: UniversalChatAgentId });
 
     bind(AppTesterChatAgent).toSelf().inSingletonScope();
     bind(Agent).toService(AppTesterChatAgent);
