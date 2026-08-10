@@ -24,6 +24,7 @@ import { ChatNodeToolbarActionContribution } from '../chat-node-toolbar-action-c
 import { ChatResponseContent } from '@theia/ai-chat';
 import { ContextMenuRenderer, TreeNode } from '@theia/core/lib/browser';
 import { nls } from '@theia/core/lib/common/nls';
+import { ChatResponseContentList } from './chat-response-content-list';
 
 /**
  * Subset of the ChatViewTreeWidget used to render ResponseNodes for delegated prompts.
@@ -50,9 +51,12 @@ export class SubChatWidget {
                             <ProgressMessage {...c} key={`${node.id}-progress-untilFirstContent-${i}`} />
                         )
                 }
-                {node.response.response.content.map((c, i) =>
-                    <div className='theia-ResponseNode-Content' key={`${node.id}-content-${i}`}>{this.getChatResponsePartRenderer(c, node)}</div>
-                )}
+                <ChatResponseContentList
+                    content={node.response.response.content}
+                    node={node}
+                    keyPrefix={node.id}
+                    renderContent={(content, parent) => this.getChatResponsePartRenderer(content, parent)}
+                />
                 {!node.response.isComplete
                     && node.response.progressMessages
                         .filter(c => c.show === 'whileIncomplete')

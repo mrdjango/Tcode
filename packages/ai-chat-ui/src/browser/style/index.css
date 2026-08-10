@@ -1251,6 +1251,47 @@ div:last-child>.theia-ChatNode {
   outline: 1px solid var(--theia-focusBorder);
 }
 
+.theia-ToolCallGroup {
+  margin-block: 6px;
+}
+
+.theia-ToolCallGroup-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding-block: 4px;
+  padding-inline: 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--theia-descriptionForeground);
+  background: transparent;
+  font-family: var(--theia-ui-font-family);
+  font-size: var(--theia-ui-font-size1);
+  line-height: var(--theia-content-line-height);
+  text-align: start;
+  cursor: pointer;
+}
+
+.theia-ToolCallGroup-summary:hover {
+  color: var(--theia-foreground);
+  background: var(--theia-list-hoverBackground);
+}
+
+.theia-ToolCallGroup-summary:focus-visible {
+  outline: 1px solid var(--theia-focusBorder);
+  outline-offset: 2px;
+}
+
+.theia-ToolCallGroup-summary>.codicon:last-child {
+  font-size: 12px;
+}
+
+.theia-ToolCallGroup-content {
+  margin-block-start: 2px;
+  padding-inline-start: 2px;
+}
+
 /* Tool confirmation styles */
 .theia-tool-confirmation {
   margin: 10px 0;

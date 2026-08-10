@@ -66,6 +66,7 @@ import { ProgressMessage } from '../chat-progress-message';
 import { AIChatTreeInputFactory, type AIChatTreeInputWidget } from './chat-view-tree-input-widget';
 import { PromptVariantBadge } from './prompt-variant-badge';
 import { ModelBadge } from './model-badge';
+import { ChatResponseContentList } from './chat-response-content-list';
 
 // TODO Instead of directly operating on the ChatRequestModel we could use an intermediate view model
 export interface RequestNode extends TreeNode {
@@ -691,9 +692,12 @@ export class ChatViewTreeWidget extends TreeWidget {
                             <ProgressMessage {...c} key={`${node.id}-progress-untilFirstContent-${i}`} />
                         )
                 }
-                {node.response.response.content.map((c, i) =>
-                    <div className='theia-ResponseNode-Content' key={`${node.id}-content-${i}`}>{this.getChatResponsePartRenderer(c, node)}</div>
-                )}
+                <ChatResponseContentList
+                    content={node.response.response.content}
+                    node={node}
+                    keyPrefix={node.id}
+                    renderContent={(content, parent) => this.getChatResponsePartRenderer(content, parent)}
+                />
                 {!node.response.isComplete
                     && node.response.progressMessages
                         .filter(c => c.show === 'whileIncomplete')
