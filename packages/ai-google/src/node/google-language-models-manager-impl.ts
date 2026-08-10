@@ -107,6 +107,8 @@ export class GoogleLanguageModelsManagerImpl implements GoogleLanguageModelsMana
                 model: modelDescription.model,
                 enableStreaming: modelDescription.enableStreaming,
                 apiKey: apiKeyProvider,
+                baseURL: modelDescription.baseURL,
+                apiVersion: modelDescription.apiVersion,
                 retrySettings: retrySettingsProvider,
                 status,
                 reasoningSupport: metadata.reasoningSupport,
@@ -125,7 +127,9 @@ export class GoogleLanguageModelsManagerImpl implements GoogleLanguageModelsMana
                     metadata.reasoningSupport,
                     metadata.reasoningApi,
                     metadata.maxInputTokens,
-                    GOOGLE_SERVER_TOOLS
+                    GOOGLE_SERVER_TOOLS,
+                    modelDescription.baseURL,
+                    modelDescription.apiVersion,
                 )
             ]);
         }
@@ -146,7 +150,7 @@ export class GoogleLanguageModelsManagerImpl implements GoogleLanguageModelsMana
         if (!apiKey) {
             return undefined;
         }
-        const cacheKey = modelDescription.model;
+        const cacheKey = `${modelDescription.baseURL ?? 'default'}|${modelDescription.apiVersion ?? 'default'}|${modelDescription.model}`;
         const cached = this.modelInfoCache.get(cacheKey);
         if (cached) {
             return cached;
@@ -164,7 +168,7 @@ export class GoogleLanguageModelsManagerImpl implements GoogleLanguageModelsMana
     }
 
     protected retrieveModelInfo(modelDescription: GoogleModelDescription, apiKey: string): Promise<Model> {
-        const genAI = new GoogleGenAI({ apiKey, vertexai: false });
+        const genAI = new GoogleGenAI({ apiKey, vertexai: false, httpOptions: { baseUrl: modelDescription.baseURL, apiVersion: modelDescription.apiVersion } });
         return genAI.models.get({ model: modelDescription.model });
     }
 

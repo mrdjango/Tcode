@@ -17,7 +17,6 @@
 import { AI_CORE_PREFERENCES_TITLE, PREFERENCE_NAME_SERVER_SIDE_COMPACTION } from '@theia/ai-core/lib/common/ai-core-preferences';
 import { SERVER_SIDE_COMPACTION_TOKEN_THRESHOLD_MINIMUM } from '@theia/ai-core/lib/common/language-model';
 import { LINUX_ENV_HINT, nls, PreferenceSchema } from '@theia/core';
-import { TENSORGRID_DEFAULT_BASE_URL } from './tensorgrid-provider';
 
 export const API_KEY_PREF = 'ai-features.openAiOfficial.openAiApiKey';
 export const MODELS_PREF = 'ai-features.openAiOfficial.officialOpenAiModels';
@@ -25,9 +24,6 @@ export const USE_RESPONSE_API_PREF = 'ai-features.openAiOfficial.useResponseApi'
 export const SERVER_SIDE_COMPACTION_PREF = 'ai-features.openAiOfficial.serverSideCompaction';
 export const SERVER_SIDE_COMPACTION_TOKEN_THRESHOLD_PREF = 'ai-features.openAiOfficial.serverSideCompactionTokenThreshold';
 export const CUSTOM_ENDPOINTS_PREF = 'ai-features.openAiCustom.customOpenAiModels';
-export const TCODE_ENABLED_PREF = 'ai-features.tcode.enabled';
-export const TCODE_BASE_URL_PREF = 'ai-features.tcode.baseUrl';
-export const TCODE_MODELS_PREF = 'ai-features.tcode.models';
 
 export const OpenAiPreferencesSchema: PreferenceSchema = {
     properties: {
@@ -193,26 +189,5 @@ on the machine running Theia. Use the environment variable `OPENAI_API_KEY` to s
                 }
             }
         },
-        [TCODE_ENABLED_PREF]: {
-            type: 'boolean',
-            default: true,
-            title: AI_CORE_PREFERENCES_TITLE,
-            description: nls.localize('theia/ai/tcode/enabled/description', 'Enable the TCode TensorGrid provider')
-        },
-        [TCODE_BASE_URL_PREF]: {
-            type: 'string',
-            default: TENSORGRID_DEFAULT_BASE_URL,
-            title: AI_CORE_PREFERENCES_TITLE,
-            description: nls.localize('theia/ai/tcode/baseUrl/description', 'OpenAI-compatible TensorGrid API base URL')
-        },
-        [TCODE_MODELS_PREF]: {
-            type: 'array',
-            default: [],
-            title: AI_CORE_PREFERENCES_TITLE,
-            description: nls.localize('theia/ai/tcode/models/description', 'TensorGrid model IDs available to TCode'),
-            items: {
-                type: 'string'
-            }
-        }
     }
 };

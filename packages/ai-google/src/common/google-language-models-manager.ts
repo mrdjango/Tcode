@@ -31,6 +31,10 @@ export interface GoogleModelDescription {
      * The key for the model. If 'true' is provided the global Gemini API key will be used.
      */
     apiKey: string | true | undefined;
+    /** Optional Gemini-compatible API origin (for example a managed gateway). */
+    baseURL?: string;
+    /** Optional Gemini API version used with {@link baseURL}. */
+    apiVersion?: string;
     /**
      * Indicate whether the streaming API shall be used.
      */

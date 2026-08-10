@@ -57,9 +57,6 @@ export class OpenAiLanguageModelsManagerImpl implements OpenAiLanguageModelsMana
     }
 
     protected calculateStatus(modelDescription: OpenAiModelDescription, effectiveApiKey: string | undefined): LanguageModelStatus {
-        if (modelDescription.requiresAuthentication && !effectiveApiKey) {
-            return { status: 'unavailable', message: 'Sign in to TensorGrid to use this model' };
-        }
         // Custom models (with `url`) are always marked ready since their API key requirements are unknown.
         if (modelDescription.url) {
             return { status: 'ready' };
@@ -108,7 +105,6 @@ export class OpenAiLanguageModelsManagerImpl implements OpenAiLanguageModelsMana
                     enableStreaming: metadata.enableStreaming,
                     url: modelDescription.url,
                     apiKey: apiKeyProvider,
-                    requiresAuthentication: modelDescription.requiresAuthentication,
                     apiVersion: apiVersionProvider,
                     deployment: modelDescription.deployment,
                     developerMessageSettings: metadata.developerMessageSettings,
@@ -147,8 +143,7 @@ export class OpenAiLanguageModelsManagerImpl implements OpenAiLanguageModelsMana
                         serverTools,
                         metadata.serverSideCompactionSupport,
                         modelDescription.serverSideCompactionEnabledByDefault ?? false,
-                        modelDescription.serverSideCompactionTokenThresholdByDefault,
-                        modelDescription.requiresAuthentication
+                        modelDescription.serverSideCompactionTokenThresholdByDefault
                     )
                 ]);
             }

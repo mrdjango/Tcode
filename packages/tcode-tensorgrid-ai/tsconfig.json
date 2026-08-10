@@ -1,0 +1,11 @@
+{
+  "extends": "../../configs/base.tsconfig",
+  "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "lib" },
+  "include": ["src"],
+  "references": [
+    { "path": "../ai-openai" },
+    { "path": "../ai-anthropic" },
+    { "path": "../ai-google" },
+    { "path": "../core" }
+  ]
+}

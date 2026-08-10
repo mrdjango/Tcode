@@ -132,25 +132,6 @@ describe('OpenAiModel reasoning translation', () => {
     });
 });
 
-describe('OpenAiModel TensorGrid authentication', () => {
-    it('rejects requests without an API key before creating an OpenAI client', async () => {
-        const model = new OpenAiModel(
-            'tensorgrid/fast', 'fast', { status: 'unavailable' }, true,
-            () => undefined, () => undefined,
-            false, 'https://api.tensorgrid.space/v1', undefined,
-            new OpenAiModelUtils(), new OpenAiResponseApiUtils(),
-            'developer', 3, false, undefined, undefined, undefined, undefined, false, false, undefined, true
-        );
-
-        try {
-            await model.request({ sessionId: 'session-1', requestId: 'request-1', messages: [] });
-            expect.fail('Expected authentication to be required');
-        } catch (error) {
-            expect(error).to.be.instanceOf(Error).with.property('message', 'Sign in to TensorGrid before using this model.');
-        }
-    });
-});
-
 describe('OpenAiModel Response API fallback', () => {
     function createFailingModel(): TestableOpenAiModel {
         const responseApiUtils = {

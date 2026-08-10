@@ -66,6 +66,7 @@
     "@theia/ai-registry": "1.74.0",
     "@theia/ai-scanoss": "1.74.0",
     "@theia/ai-terminal": "1.74.0",
+    "@tcode/tensorgrid-ai": "1.74.0-tcode.1",
     "@theia/ai-tool-sketchpad": "1.74.0",
     "@theia/api-provider-sample": "1.74.0",
     "@theia/api-samples": "1.74.0",
