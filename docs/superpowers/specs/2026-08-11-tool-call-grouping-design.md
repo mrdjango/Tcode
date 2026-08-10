@@ -8,6 +8,7 @@ Keep long Tcode chat responses readable by collapsing runs of more than two cons
 
 - Apply the behavior to the main chat response and delegated sub-chat response.
 - Group only consecutive client tool-call response content.
+- Keep renderer-declared standalone tool calls, including Tcode `todoWrite` and Codex `todo_list`, outside tool-call groups.
 - Any prose, error, progress, server-tool content, or other non-client-tool content ends the current group.
 - Preserve the current rendering of one or two consecutive tool calls.
 - Do not change tool execution, confirmation, persistence, or provider behavior.
@@ -29,6 +30,14 @@ A reusable React disclosure component renders grouped tool calls. `ChatViewTreeW
 
 The threshold is a named constant with the value `2`: a run is grouped only when its length is greater than that value.
 
+### Standalone Tool Renderers
+
+`ChatResponsePartRenderer` exposes an optional grouping policy. The default remains groupable so existing renderers require no change. A specialized renderer can declare its content `standalone` when folding it into a generic tool disclosure would hide or misrepresent its dedicated UI.
+
+Both the Tcode `todoWrite` renderer and the Codex `todo_list` renderer declare this standalone policy. Renderer selection still follows the existing priority rules; the selected renderer's policy determines grouping. This avoids coupling `ai-chat-ui` to tool names owned by `ai-ide` or `ai-codex`.
+
+A standalone tool call is emitted as ordinary response content and acts as a grouping boundary. Therefore, three tools followed by a Todo update and three more tools render as `Ran 3 tools`, the visible Todo list, and a separate `Ran 3 tools` disclosure. The Todo is not included in either count.
+
 ## Streaming and Interaction Safety
 
 - A group is considered complete only when every tool call in the run is finished.
@@ -48,6 +57,8 @@ Logical CSS properties are used so the disclosure works in both LTR and RTL chat
 - Pure grouping tests cover zero, one, two, and three consecutive tool calls.
 - Tests verify that prose splits two tool groups.
 - Tests verify that non-tool response content is never absorbed into a group.
+- Tests verify that renderer-declared standalone tools are excluded from counts and split adjacent tool runs.
+- Tests verify that both Todo renderers opt into standalone behavior.
 - Component tests verify the default collapsed completed state, expanded incomplete state, label/count, `aria-expanded`, and toggle behavior.
 - Existing `ai-chat-ui` compile, lint, and test suites must remain green.
 - The Electron app is rebuilt and the macOS ARM64 bundle is refreshed and code-signature verified.
@@ -60,3 +71,4 @@ Logical CSS properties are used so the disclosure works in both LTR and RTL chat
 4. Pending execution or confirmation is never hidden by default.
 5. Expanding the group reveals every existing tool detail and interaction unchanged.
 6. The same behavior is present in the main chat and delegated sub-chat.
+7. Tcode and Codex Todo updates remain visible as standalone Todo UI and are never counted inside `Ran N tools`.
