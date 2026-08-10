@@ -38,12 +38,12 @@ export class ErrorPartRenderer implements ChatResponsePartRenderer<ErrorChatResp
             <div className='theia-ChatPart-Error'>
                 <div className='theia-ChatPart-Error-headline'>
                     <div className='theia-ChatPart-Error-prefix'><span className='codicon codicon-error' />{prefix}</div>
-                    <div className='theia-ChatPart-Error-message'>{formattedError.message}</div>
+                    <div className='theia-ChatPart-Error-message theia-ChatProse' dir='auto'>{formattedError.message}</div>
                 </div>
                 {formattedError.details && (
                     <details>
                         <summary>{nls.localizeByDefault('Details')}</summary>
-                        <pre>{formattedError.details}</pre>
+                        <pre className='theia-ChatTechnical' dir='ltr'>{formattedError.details}</pre>
                     </details>
                 )}
             </div>

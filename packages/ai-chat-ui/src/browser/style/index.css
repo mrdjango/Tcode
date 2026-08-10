@@ -1215,6 +1215,42 @@ div:last-child>.theia-ChatNode {
   cursor: pointer;
 }
 
+.theia-ChatActivity {
+  position: relative;
+  margin-block: 6px;
+  padding-inline-start: 18px;
+  min-height: 20px;
+}
+
+.theia-ChatActivity::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 5px;
+  inset-block: -4px;
+  width: 1px;
+  background: var(--theia-widget-border);
+}
+
+.theia-ChatActivity::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 2px;
+  inset-block-start: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--theia-descriptionForeground);
+}
+
+.theia-ChatActivity details>summary {
+  border-radius: 4px;
+  outline-offset: 2px;
+}
+
+.theia-ChatActivity details>summary:focus-visible {
+  outline: 1px solid var(--theia-focusBorder);
+}
+
 /* Tool confirmation styles */
 .theia-tool-confirmation {
   margin: 10px 0;
