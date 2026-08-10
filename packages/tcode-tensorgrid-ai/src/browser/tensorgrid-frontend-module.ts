@@ -15,14 +15,11 @@ import { TensorGridAuthService, TENSORGRID_AUTH_SERVICE_PATH, TensorGridPreferen
 import { TensorGridAuthUriHandler } from './tensorgrid-auth-uri-handler';
 import { TensorGridCommandContribution } from './tensorgrid-command-contribution';
 import { TensorGridModelContribution } from './tensorgrid-model-contribution';
-import { TensorGridStartupContribution } from './tensorgrid-startup-contribution';
 import { TensorGridStartupGate } from './tensorgrid-startup-gate';
 
 export default new ContainerModule(bind => {
     bind(PreferenceContribution).toConstantValue({ schema: TensorGridPreferencesSchema });
     bind(TensorGridStartupGate).toSelf().inSingletonScope();
-    bind(TensorGridStartupContribution).toSelf().inSingletonScope();
-    bind(FrontendApplicationContribution).toService(TensorGridStartupContribution);
     bind(TensorGridModelContribution).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(TensorGridModelContribution);
     bind(TensorGridAuthUriHandler).toSelf().inSingletonScope();
