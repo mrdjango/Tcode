@@ -20,6 +20,7 @@ let disableJSDOM = enableJSDOM();
 
 import { expect } from 'chai';
 import { createRoot, Root } from '@theia/core/shared/react-dom/client';
+import { flushSync } from '@theia/core/shared/react-dom';
 import { ErrorChatResponseContent } from '@theia/ai-chat/lib/common';
 import { ErrorPartRenderer } from './error-part-renderer';
 
@@ -43,24 +44,21 @@ describe('ErrorPartRenderer', () => {
         document.body.removeChild(container);
     });
 
-    it('keeps the concise provider message visible and isolates expandable technical details', done => {
+    it('keeps the concise provider message visible and isolates expandable technical details', () => {
         const response = {
             kind: 'error',
             error: { message: '400 {"error":{"message":"Missing call_id","field":"input[4].call_id"}}' }
         } as ErrorChatResponseContent;
 
-        root.render(new ErrorPartRenderer().render(response));
+        flushSync(() => root.render(new ErrorPartRenderer().render(response)));
 
-        setTimeout(() => {
-            const headline = container.querySelector('.theia-ChatPart-Error-message');
-            const details = container.querySelector('details');
-            const technical = details?.querySelector('pre');
-            expect(headline?.textContent).to.equal('Missing call_id');
-            expect(headline?.getAttribute('dir')).to.equal('auto');
-            expect(details?.hasAttribute('open')).to.equal(false);
-            expect(technical?.classList.contains('theia-ChatTechnical')).to.equal(true);
-            expect(technical?.getAttribute('dir')).to.equal('ltr');
-            done();
-        }, 0);
+        const headline = container.querySelector('.theia-ChatPart-Error-message');
+        const details = container.querySelector('details');
+        const technical = details?.querySelector('pre');
+        expect(headline?.textContent).to.equal('Missing call_id');
+        expect(headline?.getAttribute('dir')).to.equal('auto');
+        expect(details?.hasAttribute('open')).to.equal(false);
+        expect(technical?.classList.contains('theia-ChatTechnical')).to.equal(true);
+        expect(technical?.getAttribute('dir')).to.equal('ltr');
     });
 });
