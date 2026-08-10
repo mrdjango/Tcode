@@ -26,9 +26,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Compile upstream dependencies
-        run: |
-          npm run compile --workspace @theia/core
-          npm run compile --workspace @theia/ai-openai
+        run: npm run compile
       - name: Compile Tcode extension and application
         run: |
           npm run compile --workspace @tcode/tensorgrid-ai
