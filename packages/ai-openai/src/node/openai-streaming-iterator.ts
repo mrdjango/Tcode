@@ -14,7 +14,7 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { LanguageModelStreamResponsePart, ToolCallResult, ToolCallTextResult } from '@theia/ai-core';
+import { LanguageModelStreamResponsePart, ToolCall, ToolCallResult, ToolCallTextResult, isToolCallResponsePart } from '@theia/ai-core';
 import { CancellationError, CancellationToken, Disposable, DisposableCollection } from '@theia/core';
 import { Deferred } from '@theia/core/lib/common/promise-util';
 import { ChatCompletionStream, ChatCompletionStreamEvents } from 'openai/lib/ChatCompletionStream';
@@ -28,6 +28,7 @@ export class StreamingAsyncIterator implements AsyncIterableIterator<LanguageMod
     protected done = false;
     protected terminalError: Error | undefined = undefined;
     protected readonly toDispose = new DisposableCollection();
+    protected readonly toolCallsByIndex = new Map<number, Pick<ToolCall, 'id' | 'function'>>();
 
     constructor(
         protected readonly stream: ChatCompletionStream,
@@ -90,7 +91,8 @@ export class StreamingAsyncIterator implements AsyncIterableIterator<LanguageMod
                 delete (snapshot.choices[0].message as { channel?: string }).channel;
                 return;
             }
-            this.handleIncoming({ ...chunk.choices[0]?.delta as LanguageModelStreamResponsePart });
+            const responsePart = { ...chunk.choices[0]?.delta as LanguageModelStreamResponsePart };
+            this.handleIncoming(this.correlateToolCallDeltas(responsePart));
         });
         if (cancellationToken) {
             this.toDispose.push(cancellationToken.onCancellationRequested(() => stream.abort()));
@@ -135,6 +137,46 @@ export class StreamingAsyncIterator implements AsyncIterableIterator<LanguageMod
         } else {
             this.messageCache.push(message);
         }
+    }
+
+    /**
+     * OpenAI-compatible providers commonly send a tool call's id and name only
+     * in its first chunk. Later chunks contain just `index` and an arguments
+     * fragment. The generic chat layer needs the id to merge those fragments
+     * into the original call, otherwise it treats them as anonymous calls.
+     */
+    protected correlateToolCallDeltas(responsePart: LanguageModelStreamResponsePart): LanguageModelStreamResponsePart {
+        if (!isToolCallResponsePart(responsePart)) {
+            return responsePart;
+        }
+
+        return {
+            ...responsePart,
+            tool_calls: responsePart.tool_calls.map((toolCall, position) => {
+                const indexedToolCall = toolCall as ToolCall & { index?: number };
+                const index = indexedToolCall.index ?? position;
+                const previous = this.toolCallsByIndex.get(index);
+                const identity = {
+                    id: toolCall.id ?? previous?.id,
+                    function: {
+                        ...toolCall.function,
+                        name: toolCall.function?.name ?? previous?.function?.name
+                    }
+                };
+                this.toolCallsByIndex.set(index, identity);
+
+                if (!previous || toolCall.function?.arguments === undefined) {
+                    return toolCall;
+                }
+                const { index: _index, ...toolCallWithoutIndex } = indexedToolCall;
+                return {
+                    ...toolCallWithoutIndex,
+                    id: identity.id,
+                    function: identity.function,
+                    argumentsDelta: true
+                };
+            })
+        };
     }
 
     protected registerStreamListener<Event extends keyof ChatCompletionStreamEvents>(eventType: Event, handler: ChatCompletionStreamEvents[Event], once?: boolean): void {

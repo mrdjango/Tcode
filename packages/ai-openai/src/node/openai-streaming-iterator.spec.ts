@@ -252,4 +252,47 @@ describe('StreamingAsyncIterator', () => {
             }
         ]);
     });
+
+    it('should correlate argument-only tool call chunks with the preceding tool call', async () => {
+        iterator = createIterator();
+
+        mockStream.emit('chunk', {
+            choices: [{
+                delta: {
+                    tool_calls: [{
+                        index: 0,
+                        id: 'call-123',
+                        type: 'function',
+                        function: { name: 'searchInWorkspace', arguments: '' }
+                    }]
+                }
+            }]
+        });
+        mockStream.emit('chunk', {
+            choices: [{
+                delta: {
+                    tool_calls: [{
+                        index: 0,
+                        function: { arguments: '{"query":"chat-session-summary-agent"}' }
+                    }]
+                }
+            }]
+        });
+        mockStream.emit('end');
+
+        const results: LanguageModelStreamResponsePart[] = [];
+        for await (const part of iterator) {
+            results.push(part);
+        }
+
+        expect(results).to.have.lengthOf(2);
+        expect(isToolCallResponsePart(results[1]) && results[1].tool_calls).to.deep.equal([{
+            id: 'call-123',
+            function: {
+                name: 'searchInWorkspace',
+                arguments: '{"query":"chat-session-summary-agent"}'
+            },
+            argumentsDelta: true
+        }]);
+    });
 });

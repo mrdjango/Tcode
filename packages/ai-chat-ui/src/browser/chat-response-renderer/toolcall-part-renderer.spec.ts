@@ -20,6 +20,7 @@ import { OpenerService } from '@theia/core/lib/browser';
 import { ReactNode } from '@theia/core/shared/react';
 import { ToolCallPartRenderer } from './toolcall-part-renderer';
 import { condenseArguments, formatArgsForTooltip } from './toolcall-utils';
+import { ResponseNode } from '../chat-tree-view';
 
 describe('condenseArguments', () => {
 
@@ -294,9 +295,16 @@ class TestableToolCallPartRenderer extends ToolCallPartRenderer {
     constructor() {
         super();
         this.openerService = {} as OpenerService;
+        this.keybindingRegistry = { getKeybindingsForCommand: () => [] } as never;
     }
     callRenderResult(response: ToolCallChatResponseContent): ReactNode {
         return this.renderResult(response);
+    }
+    callRender(response: ToolCallChatResponseContent): ReactNode {
+        return this.render(response, {
+            sessionId: 'session-1',
+            response: { isCanceled: false }
+        } as ResponseNode);
     }
 }
 
@@ -405,4 +413,19 @@ describe('ToolCallPartRenderer.renderResult', () => {
         expect(node.props.children).to.equal(JSON.stringify(result, undefined, 2));
     });
 
+});
+
+describe('ToolCallPartRenderer.render', () => {
+
+    it('does not render an orphaned argument fragment as a denied tool call', () => {
+        const renderer = new TestableToolCallPartRenderer();
+        const orphanedFragment = {
+            kind: 'toolCall',
+            arguments: '{"query":"chat-session-summary-agent"}',
+            finished: true,
+            result: { denied: true }
+        } as unknown as ToolCallChatResponseContent;
+
+        expect(renderer.callRender(orphanedFragment)).to.be.undefined;
+    });
 });

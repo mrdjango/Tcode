@@ -90,6 +90,12 @@ export class ToolCallPartRenderer implements ChatResponsePartRenderer<ToolCallCh
     }
 
     render(response: ToolCallChatResponseContent, parentNode: ResponseNode): ReactNode {
+        // An arguments-only stream fragment is not an independently actionable
+        // tool call. Older OpenAI-compatible streams could persist such orphaned
+        // fragments; rendering one would classify it as disabled and deny it.
+        if (!response.id && !response.name) {
+            return undefined;
+        }
         const chatId = parentNode.sessionId;
         const toolRequest = response.name ? this.toolInvocationRegistry.getFunction(response.name) : undefined;
         const confirmationMode = response.name ? this.getToolConfirmationSettings(response.name, chatId, toolRequest) : ToolConfirmationMode.DISABLED;
