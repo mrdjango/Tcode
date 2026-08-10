@@ -26,10 +26,6 @@
         "applicationName": "Tcode",
         "reloadOnReconnect": true,
         "electron": {
-          "splashScreenOptions": {
-            "content": "resources/theia-logo.svg",
-            "height": 90
-          },
           "uriScheme": "tcode",
           "appUserModelId": "TensorGrid.Tcode"
         }
