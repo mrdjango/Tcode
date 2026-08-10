@@ -2081,6 +2081,42 @@ details.theia-tool-confirmation-args>summary::marker {
   background-color: var(--theia-inputOption-activeBackground);
 }
 
+.theia-ChatInputOptions .theia-ChatInput-CapabilitiesAdd {
+  border: 1px solid var(--theia-widget-border);
+  border-radius: 999px;
+  min-width: 24px;
+  min-height: 24px;
+  justify-content: center;
+}
+
+.theia-ChatInputOptions .theia-ChatInput-CapabilitiesAdd.toggled {
+  background: var(--theia-toolbar-activeBackground);
+  color: var(--theia-toolbar-activeForeground);
+}
+
+.theia-capabilities-collapsed-bar {
+  padding-inline: 8px;
+}
+
+.theia-capabilities-collapsed-scrollbar {
+  gap: 6px;
+}
+
+.theia-ChatInput-CapabilitiesPanel {
+  max-height: min(48vh, 420px);
+  overflow: auto;
+}
+
+@media (max-width: 560px) {
+  .theia-ChatInput-CapabilitiesPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theia-ChatInput-CapabilitiesPanel-Divider {
+    display: none;
+  }
+}
+
 .theia-ChatInputOptions .option {
   position: relative;
 }

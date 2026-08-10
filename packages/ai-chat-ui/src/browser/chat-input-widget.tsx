@@ -2494,7 +2494,7 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
     approvalModeProps,
     capabilitiesToggle
 }) => {
-    const capabilitiesLabel = nls.localize('theia/ai/chat-ui/toggleCapabilitiesConfig', 'Toggle Capabilities Configuration');
+    const capabilitiesLabel = nls.localize('theia/ai/chat-ui/addCapabilities', 'Add capabilities');
     const capabilitiesTitle = capabilitiesToggle.keybindingHint
         ? `${capabilitiesLabel} (${capabilitiesToggle.keybindingHint})`
         : capabilitiesLabel;
@@ -2579,10 +2579,10 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
                 )}
                 {capabilitiesToggle.show && (
                     <span
-                        className={`option${capabilitiesToggle.isOpen ? ' toggled' : ''}`}
+                        className={`option theia-ChatInput-CapabilitiesAdd${capabilitiesToggle.isOpen ? ' toggled' : ''}`}
                         aria-label={capabilitiesLabel}
                         aria-expanded={capabilitiesToggle.isOpen}
-                        aria-pressed={capabilitiesToggle.isOpen}
+                        aria-haspopup='dialog'
                         role='button'
                         tabIndex={0}
                         onClick={capabilitiesToggle.onToggle}
@@ -2594,7 +2594,7 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
                             }
                         }}
                     >
-                        <span className="codicon codicon-tools" />
+                        <span className="codicon codicon-add" aria-hidden={true} />
                         {capabilitiesToggle.hasUnsavedChanges && (
                             <span className="theia-capabilities-unsaved-indicator" />
                         )}
@@ -2652,6 +2652,9 @@ interface CapabilitiesBarProps {
     hasUnsavedChanges: boolean;
     onSaveToSettings: () => void;
 }
+
+export const getVisibleCapabilities = (capabilities: ParsedCapability[], overrides: ReadonlyMap<string, boolean>): ParsedCapability[] =>
+    capabilities.filter(capability => overrides.get(capability.fragmentId) ?? capability.defaultEnabled);
 
 /**
  * Combined capabilities bar that shows:
@@ -2719,14 +2722,15 @@ const CapabilitiesBar: React.FunctionComponent<CapabilitiesBarProps> = ({
         );
     }
 
-    // Collapsed state: horizontal scrollable row of capability chips
-    if (capabilities.length === 0) {
+    // Collapsed state: selected capabilities only. Everything else remains available behind the add button.
+    const visibleCapabilities = getVisibleCapabilities(capabilities, overrides);
+    if (visibleCapabilities.length === 0) {
         return undefined;
     }
     return (
         <div className="theia-capabilities-collapsed-bar">
             <div className="theia-capabilities-collapsed-scrollbar">
-                {capabilities.map((capability, index) => {
+                {visibleCapabilities.map(capability => {
                     const isChecked = overrides.get(capability.fragmentId) ?? capability.defaultEnabled;
                     return (
                         <CapabilityChip

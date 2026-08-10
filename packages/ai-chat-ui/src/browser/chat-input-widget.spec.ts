@@ -24,7 +24,8 @@ FrontendApplicationConfigProvider.set({});
 import 'reflect-metadata';
 
 import { expect } from 'chai';
-import { AIChatInputWidget } from './chat-input-widget';
+import { ParsedCapability } from '@theia/ai-core';
+import { AIChatInputWidget, getVisibleCapabilities } from './chat-input-widget';
 
 disableJSDOM();
 
@@ -69,6 +70,29 @@ describe('AIChatInputWidget', () => {
                 modeId: 'test-mode',
                 preserveOverrides: true
             }]);
+        });
+    });
+
+    describe('collapsed capabilities', () => {
+        const capabilities = [
+            { fragmentId: 'shell', name: 'Shell', defaultEnabled: true },
+            { fragmentId: 'github', name: 'GitHub', defaultEnabled: false },
+            { fragmentId: 'e2e', name: 'E2E', defaultEnabled: false }
+        ] as ParsedCapability[];
+
+        it('shows only capabilities that are currently selected', () => {
+            const visible = getVisibleCapabilities(capabilities, new Map([
+                ['shell', false],
+                ['github', true]
+            ]));
+
+            expect(visible.map(capability => capability.fragmentId)).to.deep.equal(['github']);
+        });
+
+        it('uses capability defaults when there is no explicit override', () => {
+            const visible = getVisibleCapabilities(capabilities, new Map());
+
+            expect(visible.map(capability => capability.fragmentId)).to.deep.equal(['shell']);
         });
     });
 });
