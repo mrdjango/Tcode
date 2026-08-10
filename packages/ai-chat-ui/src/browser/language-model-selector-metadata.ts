@@ -127,6 +127,21 @@ export function rankReadyManagedLanguageModels(
         .sort(compareLanguageModelSelectorEntries);
 }
 
+export function getConcreteManagedLanguageModelId(
+    currentModelId: string | undefined,
+    models: readonly LanguageModel[],
+    providers: readonly LanguageModelSelectorMetadataProvider[],
+): string | undefined {
+    const ranked = rankReadyManagedLanguageModels(models, providers);
+    if (ranked.length === 0) {
+        return undefined;
+    }
+    if (currentModelId && models.some(model => model.id === currentModelId && model.status.status === 'ready')) {
+        return currentModelId;
+    }
+    return ranked[0].model.id;
+}
+
 @injectable()
 export class LanguageModelSelectorMetadataService {
     @inject(ContributionProvider) @named(LanguageModelSelectorMetadataProvider)
@@ -156,5 +171,9 @@ export class LanguageModelSelectorMetadataService {
 
     rankReadyManaged(models: readonly LanguageModel[]): LanguageModelSelectorEntry[] {
         return rankReadyManagedLanguageModels(models, this.getProviders());
+    }
+
+    getConcreteManagedModelId(currentModelId: string | undefined, models: readonly LanguageModel[]): string | undefined {
+        return getConcreteManagedLanguageModelId(currentModelId, models, this.getProviders());
     }
 }

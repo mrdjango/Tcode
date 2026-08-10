@@ -8,6 +8,7 @@ import { expect } from 'chai';
 import { LanguageModel } from '@theia/ai-core';
 import {
     compareLanguageModelSelectorGroups,
+    getConcreteManagedLanguageModelId,
     getLanguageModelSelectorMetadata,
     rankReadyManagedLanguageModels,
     toLanguageModelSelectorEntry,
@@ -89,5 +90,20 @@ describe('language model selector metadata', () => {
         expect(rankReadyManagedLanguageModels(models, [provider]).map(entry => entry.model.id)).to.deep.equal([
             'best', 'a-equal', 'b-equal', 'z-null',
         ]);
+    });
+
+    it('keeps a ready manual choice and falls back when the choice disappears', () => {
+        const models = [model('best'), model('manual')];
+        const provider: LanguageModelSelectorMetadataProvider = {
+            canHandle: candidate => candidate.id === 'best' ? 100 : 0,
+            getMetadata: candidate => candidate.id === 'best'
+                ? { label: 'Best', group: { id: 'best', label: 'Best', ratio: 0.1 } }
+                : undefined,
+        };
+
+        expect(getConcreteManagedLanguageModelId('manual', models, [provider])).to.equal('manual');
+        expect(getConcreteManagedLanguageModelId('removed', models, [provider])).to.equal('best');
+        expect(getConcreteManagedLanguageModelId(undefined, models, [provider])).to.equal('best');
+        expect(getConcreteManagedLanguageModelId(undefined, [model('unmanaged')], [provider])).to.equal(undefined);
     });
 });

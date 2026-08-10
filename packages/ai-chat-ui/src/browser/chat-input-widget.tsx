@@ -56,6 +56,8 @@ import { PendingImageRegistry } from '@theia/ai-chat/lib/browser/pending-image-r
 import { ChatCapabilitiesService } from './chat-capabilities-service';
 import { CapabilityChip, CapabilityChipsRow } from './chat-capabilities-panel';
 import { ChatInputFocusService } from './chat-input-focus-service';
+import { ChatModelSelector } from './model-selector/chat-model-selector';
+import { LanguageModelSelectorEntry, LanguageModelSelectorMetadataService } from './language-model-selector-metadata';
 import { AvailableGenericCapabilities, GenericCapabilitiesService } from './generic-capabilities-service';
 import { GenericCapabilitiesSection } from './generic-capabilities-section';
 import { ServerToolsSection } from './generic-capabilities-tree';
@@ -208,6 +210,9 @@ export class AIChatInputWidget extends ReactWidget {
 
     @inject(FrontendLanguageModelRegistry)
     protected readonly languageModelRegistry: FrontendLanguageModelRegistry;
+
+    @inject(LanguageModelSelectorMetadataService) @optional()
+    protected readonly modelSelectorMetadataService?: LanguageModelSelectorMetadataService;
 
     @inject(PreferenceService) @optional()
     protected readonly preferenceService: PreferenceService | undefined;
@@ -539,6 +544,21 @@ export class AIChatInputWidget extends ReactWidget {
 
     protected async loadAvailableModels(): Promise<void> {
         this.availableModels = await this.languageModelRegistry.getLanguageModels();
+        this.ensureConcreteManagedModel();
+    }
+
+    protected ensureConcreteManagedModel(): void {
+        if (!this.modelSelectorMetadataService) {
+            return;
+        }
+        const currentModelId = this.getSessionModelOverride();
+        const concreteModelId = this.modelSelectorMetadataService.getConcreteManagedModelId(
+            currentModelId,
+            this.availableModels,
+        );
+        if (concreteModelId && concreteModelId !== currentModelId) {
+            this.handleSessionModelChange(concreteModelId);
+        }
     }
 
     /**
@@ -607,6 +627,11 @@ export class AIChatInputWidget extends ReactWidget {
             ?? nls.localize('theia/ai/chat-ui/agentDefaultModel', 'agent default');
         return {
             models: this.availableModels,
+            entries: this.availableModels
+                .filter(model => model.status.status === 'ready')
+                .map(model => this.modelSelectorMetadataService?.toEntry(model))
+                .filter((entry): entry is LanguageModelSelectorEntry => !!entry),
+            hasManagedReadyModels: !!this.modelSelectorMetadataService?.rankReadyManaged(this.availableModels).length,
             currentModelId,
             defaultLabel,
             onModelChange: this.handleSessionModelChange,
@@ -1017,6 +1042,7 @@ export class AIChatInputWidget extends ReactWidget {
             }
         }));
         this._chatModel = chatModel;
+        this.ensureConcreteManagedModel();
         // Evaluate the warning on attach. `notifiedSessions` lives on this widget
         // instance, so the warning fires at most once per (widget lifetime × session):
         // - Within the same widget, switching between sessions that have already been
@@ -1107,6 +1133,11 @@ export class AIChatInputWidget extends ReactWidget {
                 this.updateReasoningSupport(this.receivingAgent.agentId);
             }
         }));
+        if (this.modelSelectorMetadataService) {
+            this.toDispose.push(this.modelSelectorMetadataService.onDidChange(() => {
+                this.loadAvailableModels().then(() => this.update());
+            }));
+        }
         // When the agent's model is changed in the AI configuration, refresh the selector's resolved
         // default and the model-dependent state (reasoning support, context size, server tools, vendor).
         this.toDispose.push(this.aiSettingsService.onDidChange(() => {
@@ -1851,6 +1882,10 @@ export class AIChatInputWidget extends ReactWidget {
 interface ModelSelectorWidgetProps {
     /** Models available to switch to. */
     models: LanguageModel[];
+    /** Ready model view entries enriched by selector metadata contributions. */
+    entries: LanguageModelSelectorEntry[];
+    /** Whether at least one ready model is managed by a metadata provider. */
+    hasManagedReadyModels: boolean;
     /** The session's current model override id, if any (undefined = use the agent default). */
     currentModelId?: string;
     /** Human-readable label of the model/alias new sessions use by default. */
@@ -2632,14 +2667,21 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
                     />
                 )}
                 {(modelSelectorProps.models.length > 0 || modelSelectorProps.currentModelId) && (
-                    <ChatModelSelector
-                        models={modelSelectorProps.models}
-                        currentModelId={modelSelectorProps.currentModelId}
-                        defaultLabel={modelSelectorProps.defaultLabel}
-                        onModelChange={modelSelectorProps.onModelChange}
-                        disabled={!isEnabled}
-                        hoverService={hoverService}
-                    />
+                    modelSelectorProps.hasManagedReadyModels
+                        ? <ChatModelSelector
+                            entries={modelSelectorProps.entries}
+                            currentModelId={modelSelectorProps.currentModelId}
+                            onModelChange={modelSelectorProps.onModelChange}
+                            disabled={!isEnabled}
+                        />
+                        : <DefaultChatModelSelector
+                            models={modelSelectorProps.models}
+                            currentModelId={modelSelectorProps.currentModelId}
+                            defaultLabel={modelSelectorProps.defaultLabel}
+                            onModelChange={modelSelectorProps.onModelChange}
+                            disabled={!isEnabled}
+                            hoverService={hoverService}
+                        />
                 )}
             </div>
         </div>
@@ -2817,7 +2859,7 @@ interface ChatModelSelectorProps {
  * Per-session model selector. The first option ("Default") reverts to the agent's configured
  * model that new sessions use; picking any other model overrides it for the current session only.
  */
-const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> = React.memo(({
+const DefaultChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> = React.memo(({
     models, currentModelId, defaultLabel, onModelChange, disabled, hoverService
 }) => {
     // Sentinel value for the "use the agent default" option (SelectComponent needs a non-empty value).
