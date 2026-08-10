@@ -40,3 +40,5 @@ license-check-summary.txt*
 .playwright-mcp/*
 /.theia/chatSessions
 .tmp.cfg
+dist-arm64/
+graphify-out/
