@@ -72,6 +72,7 @@ import {
     MarkdownChatResponseContentImpl,
     MutableChatRequestModel,
     ThinkingChatResponseContentImpl,
+    ToolCallChatResponseContent,
     ToolCallChatResponseContentImpl,
     ToolCallArgumentsDeltaContent,
     ServerToolCallChatResponseContentImpl,
@@ -489,6 +490,12 @@ export abstract class AbstractChatAgent implements ChatAgent {
                         // signature_delta never arrived). Some LLMs (e.g. Anthropic) reject thinking
                         // blocks without a signature.
                         if (ThinkingChatResponseContent.is(c) && !c.signature) {
+                            return false;
+                        }
+                        // A valid tool round-trip requires a stable id and name. Older
+                        // OpenAI-compatible streams could persist arguments-only fragments
+                        // without either; replaying them creates an invalid empty call_id.
+                        if (ToolCallChatResponseContent.is(c) && (!c.id || !c.name)) {
                             return false;
                         }
                         // content even has an own converter, definitely include it

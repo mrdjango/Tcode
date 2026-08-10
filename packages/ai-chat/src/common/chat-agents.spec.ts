@@ -31,6 +31,7 @@ import {
     ChatRequest,
     TextChatResponseContentImpl,
     ThinkingChatResponseContentImpl,
+    ToolCallChatResponseContentImpl,
 } from './chat-model';
 import { ParsedChatRequest, ParsedChatRequestTextPart } from './parsed-chat-request';
 
@@ -138,6 +139,28 @@ describe('AbstractChatAgent.getMessages', () => {
             .filter(m => m.actor === 'ai');
         expect(aiTextMessages).to.have.lengthOf(1);
         expect(aiTextMessages[0].text).to.equal('Partial reply before cancel');
+    });
+
+    it('filters orphaned tool argument fragments from language model history', async () => {
+        const model = new MutableChatModel(ChatAgentLocation.Panel);
+        const request = model.addRequest(createParsedRequest('Retry the task'));
+
+        request.response.response.addContent(new ToolCallChatResponseContentImpl(
+            undefined,
+            '',
+            '{"query":"chat-session-summary-agent"}',
+            true,
+            { denied: true }
+        ));
+        request.response.complete();
+
+        const messages = await agent.exposeGetMessages(model);
+
+        expect(messages).to.deep.equal([{
+            actor: 'user',
+            type: 'text',
+            text: 'Retry the task'
+        }]);
     });
 });
 
