@@ -78,6 +78,10 @@ import { ChatInputCapabilitiesContribution } from './chat-input-capabilities-con
 import { GenericCapabilitiesContribution, GenericCapabilitiesService, GenericCapabilitiesServiceImpl } from './generic-capabilities-service';
 import { ToolConfirmationKeybindingContribution } from './tool-confirmation-keybinding-contribution';
 import { ChatSessionNotificationContribution } from './chat-session-notification-contribution';
+import {
+    LanguageModelSelectorMetadataProvider,
+    LanguageModelSelectorMetadataService,
+} from './language-model-selector-metadata';
 
 export default new ContainerModule((bind, _unbind, _isBound, rebind) => {
     bindChatViewPreferences(bind);
@@ -122,6 +126,9 @@ export default new ContainerModule((bind, _unbind, _isBound, rebind) => {
 
     bind(ChatSessionNotificationContribution).toSelf().inSingletonScope();
     bind(FrontendApplicationContribution).toService(ChatSessionNotificationContribution);
+
+    bindRootContributionProvider(bind, LanguageModelSelectorMetadataProvider);
+    bind(LanguageModelSelectorMetadataService).toSelf().inSingletonScope();
 
     bindRootContributionProvider(bind, ChatResponsePartRenderer);
     bindRootContributionProvider(bind, ChatWelcomeMessageProvider);
