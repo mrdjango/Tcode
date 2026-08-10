@@ -5,6 +5,7 @@ import { TensorGridCatalogService, TENSORGRID_CATALOG_SERVICE_PATH } from '../co
 import { TensorGridModelContribution } from './tensorgrid-model-contribution';
 import { TensorGridAuthUriHandler } from './tensorgrid-auth-uri-handler';
 import { TensorGridCommandContribution } from './tensorgrid-command-contribution';
+import '../../src/browser/style/tcode-chat.css';
 
 export default new ContainerModule(bind => {
     bind(TensorGridModelContribution).toSelf().inSingletonScope();

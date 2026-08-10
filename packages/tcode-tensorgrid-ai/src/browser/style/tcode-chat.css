@@ -1,0 +1,197 @@
+/* Tcode's product-level chat finish. Semantic behavior stays in @theia/ai-chat-ui. */
+
+.chat-view-widget {
+  --tcode-chat-content-width: 920px;
+  --tcode-chat-composer-width: 940px;
+  background: var(--theia-editor-background);
+}
+
+.chat-view-widget .chat-tree-view-widget .ReactVirtualized__Grid__innerScrollContainer {
+  max-width: var(--tcode-chat-content-width);
+  margin-inline: auto;
+}
+
+.chat-view-widget .theia-ChatNode {
+  width: min(100%, var(--tcode-chat-content-width));
+  border-block-end: 0;
+  padding-inline: 22px;
+}
+
+.chat-view-widget .theia-ChatNode-request {
+  padding-block: 11px 2px;
+}
+
+.chat-view-widget .theia-ChatNode-response {
+  padding-block: 7px 17px;
+}
+
+.chat-view-widget .theia-ChatMessageBubble {
+  border-color: var(--theia-widget-border);
+  border-radius: 18px 18px 5px 18px;
+  background: var(--theia-editor-inactiveSelectionBackground);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+}
+
+.chat-view-widget .theia-ChatNode-response .theia-ChatNodeHeader {
+  gap: 6px;
+  margin-block-end: 5px;
+  opacity: 0.88;
+}
+
+.chat-view-widget .theia-ChatNode-response .theia-ResponseNode {
+  line-height: 1.55;
+}
+
+.chat-view-widget .theia-ChatNode-response .theia-ResponseNode-Content:first-child > :first-child {
+  margin-block-start: 0;
+}
+
+.chat-view-widget .theia-ChatActivity {
+  border-radius: 6px;
+  transition: background-color 100ms ease-out;
+}
+
+.chat-view-widget .theia-ChatActivity:hover {
+  background: var(--theia-list-hoverBackground);
+}
+
+.chat-view-widget .theia-ChatActivity .theia-toolCall-response-result {
+  margin-block-start: 6px;
+  border: 1px solid var(--theia-widget-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chat-view-widget .theia-ChatPart-Error {
+  padding: 7px 10px;
+  border: 0;
+  border-inline-start: 2px solid var(--theia-errorForeground);
+  border-radius: 2px 8px 8px 2px;
+  background: transparent;
+}
+
+.chat-view-widget .chat-input-widget {
+  position: relative;
+  z-index: 20;
+  width: min(100%, var(--tcode-chat-composer-width));
+  margin-inline: auto;
+  padding: 10px 18px 14px;
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, transparent, var(--theia-editor-background) 22%);
+}
+
+.chat-view-widget .theia-ChatInput {
+  margin-block-start: 0;
+}
+
+.chat-view-widget .theia-ChatInput-Editor-Box {
+  margin: 0;
+  padding: 7px;
+  border-color: var(--theia-widget-border);
+  border-radius: 20px;
+  background: var(--theia-editorWidget-background);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+
+.chat-view-widget .theia-ChatInput-Editor-Box:has(.monaco-editor.focused) {
+  border-color: var(--theia-focusBorder);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--theia-focusBorder);
+}
+
+.chat-view-widget .theia-ChatInput-Editor {
+  min-height: 42px;
+}
+
+.chat-view-widget .theia-ChatInput-Editor-Placeholder {
+  left: unset;
+  right: unset;
+  inset-inline-start: 12px;
+  inset-inline-end: 0;
+  text-align: start;
+  unicode-bidi: plaintext;
+}
+
+.chat-view-widget .theia-ChatInputOptions {
+  height: auto;
+  min-height: 30px;
+  padding-inline: 4px;
+  gap: 6px;
+}
+
+.chat-view-widget .theia-ChatInputOptions-left {
+  overflow: hidden;
+}
+
+.chat-view-widget .theia-ChatInputOptions-right {
+  margin-inline-end: 0;
+}
+
+.chat-view-widget .theia-ChatInput-CapabilityChip {
+  min-height: 24px;
+  border-radius: 999px;
+}
+
+.chat-view-widget .theia-ChatInput-CapabilitiesPanel {
+  margin: 0 2px 7px;
+  padding: 10px;
+  border: 1px solid var(--theia-widget-border);
+  border-radius: 12px;
+  background: var(--theia-editorWidget-background);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.chat-view-widget .theia-chat-approval-menu {
+  border-radius: 14px;
+}
+
+.chat-view-widget .theia-ChatInput-ModelSelector.theia-select-component,
+.chat-view-widget .theia-ChatInput-ModeSelector.theia-select-component,
+.chat-view-widget .theia-ChatInput-ReasoningSelector.theia-select-component,
+.chat-view-widget .theia-chat-approval-trigger {
+  background: transparent;
+  border-radius: 999px;
+}
+
+@media (max-width: 680px) {
+  .chat-view-widget .theia-ChatNode {
+    padding-inline: 12px;
+  }
+
+  .chat-view-widget .theia-ChatNode-request .theia-RequestNode {
+    max-width: 96%;
+  }
+
+  .chat-view-widget .chat-input-widget {
+    padding-inline: 8px;
+    padding-block-end: 8px;
+  }
+
+  .chat-view-widget .theia-ChatInput-Editor-Box {
+    border-radius: 16px;
+  }
+
+  .chat-view-widget .theia-ChatInputOptions {
+    align-items: flex-end;
+  }
+
+  .chat-view-widget .theia-ChatInputOptions-left {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .chat-view-widget .theia-ChatInput-ModelSelector.theia-select-component {
+    max-width: 128px;
+  }
+
+  .chat-view-widget .theia-ChatInput-CapabilitiesPanel {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-view-widget .theia-ChatActivity,
+  .chat-view-widget .theia-ChatInput-Editor {
+    transition: none;
+  }
+}

@@ -2383,7 +2383,8 @@ const ChatInput: React.FunctionComponent<ChatInputProperties> = (props: ChatInpu
                         onSaveToSettings={props.capabilitiesProps.onSaveToSettings}
                     />
                 )}
-                <div className='theia-ChatInput-Editor' ref={editorContainerRef} onKeyDown={onKeyDown} onFocus={handleInputFocus} onBlur={handleInputBlur}>
+                <div className='theia-ChatInput-Editor' dir='auto'
+                    ref={editorContainerRef} onKeyDown={onKeyDown} onFocus={handleInputFocus} onBlur={handleInputBlur}>
                     <div ref={placeholderRef} className='theia-ChatInput-Editor-Placeholder'>{placeholderText}</div>
                 </div>
                 {props.context && props.context.length > 0 &&
