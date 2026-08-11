@@ -57,6 +57,7 @@ import { ChatCapabilitiesService } from './chat-capabilities-service';
 import { CapabilityChip, CapabilityChipsRow } from './chat-capabilities-panel';
 import { ChatInputFocusService } from './chat-input-focus-service';
 import { ChatModelSelector } from './model-selector/chat-model-selector';
+import { ChatModelFavoritesService } from './model-selector/chat-model-favorites-service';
 import { LanguageModelSelectorEntry, LanguageModelSelectorMetadataService } from './language-model-selector-metadata';
 import { AvailableGenericCapabilities, GenericCapabilitiesService } from './generic-capabilities-service';
 import { GenericCapabilitiesSection } from './generic-capabilities-section';
@@ -213,6 +214,11 @@ export class AIChatInputWidget extends ReactWidget {
 
     @inject(LanguageModelSelectorMetadataService) @optional()
     protected readonly modelSelectorMetadataService?: LanguageModelSelectorMetadataService;
+
+    @inject(ChatModelFavoritesService)
+    protected readonly chatModelFavoritesService: ChatModelFavoritesService;
+
+    protected favoriteModelIds = new Set<string>();
 
     @inject(PreferenceService) @optional()
     protected readonly preferenceService: PreferenceService | undefined;
@@ -635,6 +641,8 @@ export class AIChatInputWidget extends ReactWidget {
             currentModelId,
             defaultLabel,
             onModelChange: this.handleSessionModelChange,
+            favoriteModelIds: this.favoriteModelIds,
+            onToggleFavorite: modelId => this.chatModelFavoritesService.toggle(modelId),
         };
     }
 
@@ -1089,6 +1097,14 @@ export class AIChatInputWidget extends ReactWidget {
             this.navigationState = new ChatInputNavigationState(this.historyService);
         });
         this.initializeContextKeys();
+        this.toDispose.push(this.chatModelFavoritesService.onDidChange(ids => {
+            this.favoriteModelIds = new Set(ids);
+            this.update();
+        }));
+        this.chatModelFavoritesService.ready.then(() => {
+            this.favoriteModelIds = new Set(this.chatModelFavoritesService.getFavoriteModelIds());
+            this.update();
+        });
         this.tokenUsageEnabled = this.preferenceService?.get<boolean>(CHAT_VIEW_TOKEN_USAGE_ENABLED, false) ?? false;
         if (this.preferenceService) {
             this.toDispose.push(this.preferenceService.onPreferenceChanged(change => {
@@ -1892,6 +1908,8 @@ interface ModelSelectorWidgetProps {
     defaultLabel: string;
     /** Set the session override (or clear it with `undefined`). */
     onModelChange: (modelId: string | undefined) => void;
+    favoriteModelIds: ReadonlySet<string>;
+    onToggleFavorite: (modelId: string) => void;
 }
 
 interface ChatInputProperties {
@@ -2672,6 +2690,8 @@ const ChatInputOptions: React.FunctionComponent<ChatInputOptionsProps> = ({
                             entries={modelSelectorProps.entries}
                             currentModelId={modelSelectorProps.currentModelId}
                             onModelChange={modelSelectorProps.onModelChange}
+                            favoriteModelIds={modelSelectorProps.favoriteModelIds}
+                            onToggleFavorite={modelSelectorProps.onToggleFavorite}
                             disabled={!isEnabled}
                         />
                         : <DefaultChatModelSelector

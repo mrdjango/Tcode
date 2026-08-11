@@ -17,21 +17,27 @@ export interface ChatModelSelectorProps {
     readonly entries: readonly LanguageModelSelectorEntry[];
     readonly currentModelId?: string;
     readonly onModelChange: (modelId: string) => void;
+    readonly favoriteModelIds: ReadonlySet<string>;
+    readonly onToggleFavorite: (modelId: string) => void;
     readonly disabled?: boolean;
 }
 
 const normalize = (value: string): string => value.toLocaleLowerCase();
+const nonShrinkingItemStyle: React.CSSProperties = { flexShrink: 0, boxSizing: 'border-box' };
+const FAVORITES_GROUP: LanguageModelSelectorGroup = { id: 'tcode:favorites', label: 'Favorites' };
 
 interface PopoverPosition {
     readonly right: number;
     readonly bottom: number;
-    readonly maxHeight: number;
+    readonly height: number;
 }
 
 export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> = React.memo(({
     entries,
     currentModelId,
     onModelChange,
+    favoriteModelIds,
+    onToggleFavorite,
     disabled,
 }) => {
     const selectedEntry = entries.find(entry => entry.model.id === currentModelId) ?? entries[0];
@@ -40,12 +46,16 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
         for (const entry of entries) {
             unique.set(entry.metadata.group.id, entry.metadata.group);
         }
-        return [...unique.values()].sort(compareLanguageModelSelectorGroups);
-    }, [entries]);
+        const catalogGroups = [...unique.values()].sort(compareLanguageModelSelectorGroups);
+        return entries.some(entry => favoriteModelIds.has(entry.model.id))
+            ? [FAVORITES_GROUP, ...catalogGroups]
+            : catalogGroups;
+    }, [entries, favoriteModelIds]);
     const [open, setOpen] = React.useState(false);
     const [activeGroupId, setActiveGroupId] = React.useState(selectedEntry?.metadata.group.id ?? groups[0]?.id);
     const [search, setSearch] = React.useState('');
     const [popoverPosition, setPopoverPosition] = React.useState<PopoverPosition>();
+    const selectedGroupId = selectedEntry?.metadata.group.id;
     // eslint-disable-next-line no-null/no-null
     const rootRef = React.useRef<HTMLDivElement>(null);
     // eslint-disable-next-line no-null/no-null
@@ -56,21 +66,21 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
     const searchRef = React.useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
-        if (selectedEntry) {
-            setActiveGroupId(selectedEntry.metadata.group.id);
-        } else if (!groups.some(group => group.id === activeGroupId)) {
-            setActiveGroupId(groups[0]?.id);
+        if (!groups.some(group => group.id === activeGroupId)) {
+            setActiveGroupId(selectedGroupId ?? groups[0]?.id);
         }
-    }, [selectedEntry, groups, activeGroupId]);
+    }, [selectedGroupId, groups, activeGroupId]);
 
     const activeGroup = groups.find(group => group.id === activeGroupId) ?? groups[0];
     const visibleModels = React.useMemo(() => {
         const query = normalize(search.trim());
         return entries
-            .filter(entry => entry.metadata.group.id === activeGroup?.id)
+            .filter(entry => activeGroup?.id === FAVORITES_GROUP.id
+                ? favoriteModelIds.has(entry.model.id)
+                : entry.metadata.group.id === activeGroup?.id)
             .filter(entry => !query || normalize(entry.metadata.label).includes(query) || normalize(entry.model.id).includes(query))
             .sort(compareLanguageModelSelectorEntries);
-    }, [entries, activeGroup, search]);
+    }, [entries, activeGroup, favoriteModelIds, search]);
 
     const close = React.useCallback((restoreFocus = true) => {
         setOpen(false);
@@ -92,7 +102,7 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
         setPopoverPosition({
             right: Math.max(16, Math.min(right, hostWindow.innerWidth - width - 16)),
             bottom: hostWindow.innerHeight - triggerRect.top + 10,
-            maxHeight: Math.max(160, Math.min(520, triggerRect.top - 26)),
+            height: Math.max(160, Math.min(520, triggerRect.top - 26)),
         });
         setActiveGroupId(selectedEntry?.metadata.group.id ?? groups[0]?.id);
         setOpen(true);
@@ -184,6 +194,7 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
                         role='option'
                         aria-selected={group.id === activeGroup?.id}
                         className={`theia-ChatModelSelector-group${group.id === activeGroup?.id ? ' selected' : ''}`}
+                        style={nonShrinkingItemStyle}
                         title={group.label}
                         onClick={() => { setActiveGroupId(group.id); setSearch(''); }}
                         onKeyDown={event => {
@@ -220,13 +231,14 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
                         }}
                     />
                 </label>
-                <div className='theia-ChatModelSelector-model-list' role='listbox' aria-label='Language models'>
-                    {visibleModels.map(entry => <button
+                <div className='theia-ChatModelSelector-model-list' role='listbox' aria-label='Language models' style={{ overflowX: 'hidden' }}>
+                    {visibleModels.map(entry => <div
                         key={entry.model.id}
-                        type='button'
                         role='option'
+                        tabIndex={0}
                         aria-selected={entry.model.id === currentModelId}
                         className={`theia-ChatModelSelector-model${entry.model.id === currentModelId ? ' selected' : ''}`}
+                        style={nonShrinkingItemStyle}
                         title={entry.model.id}
                         onClick={() => select(entry)}
                         onKeyDown={event => {
@@ -242,8 +254,24 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
                     >
                         <span className='theia-ChatModelSelector-model-marker' aria-hidden='true' />
                         <span>{entry.metadata.label}</span>
+                        <button
+                            type='button'
+                            className='theia-ChatModelSelector-favorite'
+                            data-model-favorite={entry.model.id}
+                            aria-label={favoriteModelIds.has(entry.model.id) ? `Remove ${entry.metadata.label} from favorites` : `Add ${entry.metadata.label} to favorites`}
+                            aria-pressed={favoriteModelIds.has(entry.model.id)}
+                            title={favoriteModelIds.has(entry.model.id) ? 'Remove from favorites' : 'Add to favorites'}
+                            onClick={event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onToggleFavorite(entry.model.id);
+                            }}
+                            onKeyDown={event => event.stopPropagation()}
+                        >
+                            <span className={`codicon ${favoriteModelIds.has(entry.model.id) ? 'codicon-star-full' : 'codicon-star-empty'}`} aria-hidden='true' />
+                        </button>
                         {entry.model.id === currentModelId && <span className='codicon codicon-check' aria-hidden='true' />}
-                    </button>)}
+                    </div>)}
                     {visibleModels.length === 0 && <p className='theia-ChatModelSelector-empty'>No matching models</p>}
                 </div>
             </section>

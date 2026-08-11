@@ -59,6 +59,8 @@ describe('ChatModelSelector', () => {
             entries={entries}
             currentModelId='tensorgrid/gpt-sol'
             onModelChange={() => undefined}
+            favoriteModelIds={new Set()}
+            onToggleFavorite={() => undefined}
         />));
 
         const trigger = container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!;
@@ -67,7 +69,9 @@ describe('ChatModelSelector', () => {
         flushSync(() => trigger.click());
 
         expect(container.querySelector('[role="dialog"]')).not.to.exist;
-        expect(document.body.querySelector('[role="dialog"]')).to.exist;
+        const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
+        expect(dialog).to.exist;
+        expect(dialog.style.height).to.equal('160px');
         const groups = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'));
         expect(groups.map(group => group.textContent?.replace(/\s+/g, ' ').trim())).to.deep.equal([
             'CodexPro0.2x', 'ClaudePro0.4x',
@@ -76,11 +80,22 @@ describe('ChatModelSelector', () => {
         expect(models.map(model => model.textContent?.replace(/\s+/g, ' ').trim())).to.deep.equal([
             'GPT Sol', 'GPT Mini',
         ]);
+        expect(groups.every(group => group.style.flexShrink === '0')).to.equal(true);
+        expect(models.every(model => model.style.flexShrink === '0')).to.equal(true);
+        expect(groups.every(group => group.style.boxSizing === 'border-box')).to.equal(true);
+        expect(models.every(model => model.style.boxSizing === 'border-box')).to.equal(true);
+        expect(document.body.querySelector<HTMLElement>('.theia-ChatModelSelector-model-list')!.style.overflowX).to.equal('hidden');
         expect(models[0].getAttribute('aria-selected')).to.equal('true');
     });
 
     it('searches the active group by display label and full model id', () => {
-        flushSync(() => root.render(<ChatModelSelector entries={entries} currentModelId='tensorgrid/gpt-sol' onModelChange={() => undefined} />));
+        flushSync(() => root.render(<ChatModelSelector
+            entries={entries}
+            currentModelId='tensorgrid/gpt-sol'
+            onModelChange={() => undefined}
+            favoriteModelIds={new Set()}
+            onToggleFavorite={() => undefined}
+        />));
         flushSync(() => container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!.click());
         const input = document.body.querySelector<HTMLInputElement>('.theia-ChatModelSelector-search')!;
         Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(input, 'mini');
@@ -88,8 +103,14 @@ describe('ChatModelSelector', () => {
         expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim())).to.deep.equal(['GPT Mini']);
     });
 
-    it('keeps the portal open while scrolling and switches groups on click', () => {
-        flushSync(() => root.render(<ChatModelSelector entries={entries} currentModelId='tensorgrid/gpt-sol' onModelChange={() => undefined} />));
+    it('keeps the portal open while scrolling and preserves a clicked group after effects settle', async () => {
+        flushSync(() => root.render(<ChatModelSelector
+            entries={entries}
+            currentModelId='tensorgrid/gpt-sol'
+            onModelChange={() => undefined}
+            favoriteModelIds={new Set()}
+            onToggleFavorite={() => undefined}
+        />));
         flushSync(() => container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!.click());
 
         const modelList = document.body.querySelector<HTMLElement>('.theia-ChatModelSelector-model-list')!;
@@ -99,6 +120,7 @@ describe('ChatModelSelector', () => {
         const claudeGroup = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'))
             .find(group => group.textContent?.includes('ClaudePro'))!;
         flushSync(() => claudeGroup.click());
+        await new Promise(resolve => setTimeout(resolve, 0));
         expect(document.body.querySelector('[role="dialog"]')).to.exist;
         expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim()))
             .to.deep.equal(['Claude Opus']);
@@ -110,6 +132,8 @@ describe('ChatModelSelector', () => {
             entries={entries}
             currentModelId='tensorgrid/gpt-sol'
             onModelChange={id => selected.push(id)}
+            favoriteModelIds={new Set()}
+            onToggleFavorite={() => undefined}
         />));
         const trigger = container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!;
         trigger.focus();
@@ -118,5 +142,31 @@ describe('ChatModelSelector', () => {
         flushSync(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
         expect(document.body.querySelector('[role="dialog"]')).not.to.exist;
         expect(document.activeElement).to.equal(trigger);
+    });
+
+    it('shows Favorites first and keeps a favorite toggle independent from model selection', () => {
+        const selected: string[] = [];
+        const toggled: string[] = [];
+        flushSync(() => root.render(<ChatModelSelector
+            entries={entries}
+            currentModelId='tensorgrid/gpt-sol'
+            onModelChange={id => selected.push(id)}
+            favoriteModelIds={new Set(['tensorgrid/claude-opus', 'tensorgrid/gpt-mini'])}
+            onToggleFavorite={(id: string) => toggled.push(id)}
+        />));
+        flushSync(() => container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!.click());
+
+        const groups = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'));
+        expect(groups[0].textContent).to.contain('Favorites');
+        flushSync(() => groups[0].click());
+        expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim()))
+            .to.deep.equal(['GPT Mini', 'Claude Opus']);
+
+        const star = document.body.querySelector<HTMLButtonElement>('[data-model-favorite="tensorgrid/claude-opus"]')!;
+        expect(star.getAttribute('aria-pressed')).to.equal('true');
+        flushSync(() => star.click());
+        expect(toggled).to.deep.equal(['tensorgrid/claude-opus']);
+        expect(selected).to.deep.equal([]);
+        expect(document.body.querySelector('[role="dialog"]')).to.exist;
     });
 });

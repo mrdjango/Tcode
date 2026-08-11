@@ -82,6 +82,7 @@ import {
     LanguageModelSelectorMetadataProvider,
     LanguageModelSelectorMetadataService,
 } from './language-model-selector-metadata';
+import { ChatModelFavoritesService } from './model-selector/chat-model-favorites-service';
 
 export default new ContainerModule((bind, _unbind, _isBound, rebind) => {
     bindChatViewPreferences(bind);
@@ -129,6 +130,7 @@ export default new ContainerModule((bind, _unbind, _isBound, rebind) => {
 
     bindRootContributionProvider(bind, LanguageModelSelectorMetadataProvider);
     bind(LanguageModelSelectorMetadataService).toSelf().inSingletonScope();
+    bind(ChatModelFavoritesService).toSelf().inSingletonScope();
 
     bindRootContributionProvider(bind, ChatResponsePartRenderer);
     bindRootContributionProvider(bind, ChatWelcomeMessageProvider);

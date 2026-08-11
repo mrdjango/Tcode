@@ -1096,11 +1096,13 @@ div:last-child>.theia-ChatNode {
 .theia-ChatModelSelector-model-list {
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .theia-ChatModelSelector-group,
 .theia-ChatModelSelector-model {
   display: flex;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   align-items: center;
@@ -1157,6 +1159,32 @@ div:last-child>.theia-ChatNode {
 
 .theia-ChatModelSelector-model.selected .theia-ChatModelSelector-model-marker {
   background: var(--theia-focusBorder);
+}
+
+.theia-ChatModelSelector-favorite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--theia-descriptionForeground);
+  background: transparent;
+  cursor: pointer;
+}
+
+.theia-ChatModelSelector-favorite:hover,
+.theia-ChatModelSelector-favorite:focus-visible {
+  color: var(--theia-focusBorder);
+  background: var(--theia-toolbar-hoverBackground);
+  outline: none;
+}
+
+.theia-ChatModelSelector-favorite[aria-pressed='true'] {
+  color: var(--theia-focusBorder);
 }
 
 .theia-ChatModelSelector-search-wrap {
