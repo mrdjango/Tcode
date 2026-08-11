@@ -21,6 +21,7 @@ let disableJSDOM = enableJSDOM();
 import { expect } from 'chai';
 import * as React from '@theia/core/shared/react';
 import { createRoot, Root } from '@theia/core/shared/react-dom/client';
+import { flushSync } from '@theia/core/shared/react-dom';
 import { ChatResponseContent, ToolCallChatResponseContent, ToolCallChatResponseContentImpl } from '@theia/ai-chat/lib/common';
 import { ResponseNode } from './chat-view-tree-widget';
 
@@ -76,7 +77,7 @@ describe('ChatResponseContentList', () => {
         isGroupableToolCall?: (content: ToolCallChatResponseContent) => boolean
     ): void => {
         const ContentList = loadContentList();
-        root.render(ContentList
+        flushSync(() => root.render(ContentList
             ? <ContentList
                 content={content}
                 node={node}
@@ -85,54 +86,43 @@ describe('ChatResponseContentList', () => {
                 isGroupableToolCall={isGroupableToolCall}
             />
             : <div data-missing-content-list />
-        );
+        ));
     };
 
-    it('collapses three completed tools and expands them on demand', done => {
+    it('collapses three completed tools and expands them on demand', () => {
         renderList([tool('one', true), tool('two', true), tool('three', true)]);
 
-        setTimeout(() => {
-            const summary = container.querySelector<HTMLButtonElement>('.theia-ToolCallGroup-summary');
-            expect(summary?.textContent ?? '').to.contain('Ran 3 tools');
-            expect(summary?.getAttribute('aria-expanded')).to.equal('false');
-            expect(container.querySelectorAll('.rendered-tool')).to.have.length(0);
+        const summary = container.querySelector<HTMLButtonElement>('.theia-ToolCallGroup-summary');
+        expect(summary?.textContent ?? '').to.contain('Ran 3 tools');
+        expect(summary?.getAttribute('aria-expanded')).to.equal('false');
+        expect(container.querySelectorAll('.rendered-tool')).to.have.length(0);
 
-            summary?.click();
-            setTimeout(() => {
-                expect(summary?.getAttribute('aria-expanded')).to.equal('true');
-                expect(container.querySelectorAll('.rendered-tool')).to.have.length(3);
-                done();
-            }, 0);
-        }, 0);
+        flushSync(() => summary?.click());
+        expect(summary?.getAttribute('aria-expanded')).to.equal('true');
+        expect(container.querySelectorAll('.rendered-tool')).to.have.length(3);
     });
 
-    it('keeps a group with an unfinished tool expanded', done => {
+    it('keeps a group with an unfinished tool expanded', () => {
         renderList([tool('one', true), tool('two', false), tool('three', true)]);
 
-        setTimeout(() => {
-            const summary = container.querySelector<HTMLButtonElement>('.theia-ToolCallGroup-summary');
-            expect(summary?.textContent ?? '').to.contain('Running 3 tools');
-            expect(summary?.getAttribute('aria-expanded')).to.equal('true');
-            expect(container.querySelectorAll('.rendered-tool')).to.have.length(3);
-            done();
-        }, 0);
+        const summary = container.querySelector<HTMLButtonElement>('.theia-ToolCallGroup-summary');
+        expect(summary?.textContent ?? '').to.contain('Running 3 tools');
+        expect(summary?.getAttribute('aria-expanded')).to.equal('true');
+        expect(container.querySelectorAll('.rendered-tool')).to.have.length(3);
     });
 
-    it('renders a standalone tool between two collapsed tool groups', done => {
+    it('renders a standalone tool between two collapsed tool groups', () => {
         renderList([
             tool('one', true), tool('two', true), tool('three', true),
             tool('todoWrite', true),
             tool('four', true), tool('five', true), tool('six', true)
         ], item => item.name !== 'todoWrite');
 
-        setTimeout(() => {
-            const summaries = container.querySelectorAll<HTMLButtonElement>('.theia-ToolCallGroup-summary');
-            expect(summaries).to.have.length(2);
-            expect(Array.from(summaries).map(summary => summary.textContent)).to.satisfy((labels: string[]) =>
-                labels.every(label => label.includes('Ran 3 tools')));
-            expect(container.querySelectorAll('.rendered-tool')).to.have.length(1);
-            expect(container.querySelector('.rendered-tool')?.textContent).to.equal('todoWrite');
-            done();
-        }, 0);
+        const summaries = container.querySelectorAll<HTMLButtonElement>('.theia-ToolCallGroup-summary');
+        expect(summaries).to.have.length(2);
+        expect(Array.from(summaries).map(summary => summary.textContent)).to.satisfy((labels: string[]) =>
+            labels.every(label => label.includes('Ran 3 tools')));
+        expect(container.querySelectorAll('.rendered-tool')).to.have.length(1);
+        expect(container.querySelector('.rendered-tool')?.textContent).to.equal('todoWrite');
     });
 });
