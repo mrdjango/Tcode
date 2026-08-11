@@ -66,12 +66,13 @@ describe('ChatModelSelector', () => {
         expect(trigger.textContent).to.contain('CodexPro');
         flushSync(() => trigger.click());
 
-        expect(container.querySelector('[role="dialog"]')).to.exist;
-        const groups = Array.from(container.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'));
+        expect(container.querySelector('[role="dialog"]')).not.to.exist;
+        expect(document.body.querySelector('[role="dialog"]')).to.exist;
+        const groups = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'));
         expect(groups.map(group => group.textContent?.replace(/\s+/g, ' ').trim())).to.deep.equal([
             'CodexPro0.2x', 'ClaudePro0.4x',
         ]);
-        const models = Array.from(container.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-model'));
+        const models = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-model'));
         expect(models.map(model => model.textContent?.replace(/\s+/g, ' ').trim())).to.deep.equal([
             'GPT Sol', 'GPT Mini',
         ]);
@@ -81,10 +82,25 @@ describe('ChatModelSelector', () => {
     it('searches the active group by display label and full model id', () => {
         flushSync(() => root.render(<ChatModelSelector entries={entries} currentModelId='tensorgrid/gpt-sol' onModelChange={() => undefined} />));
         flushSync(() => container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!.click());
-        const input = container.querySelector<HTMLInputElement>('.theia-ChatModelSelector-search')!;
+        const input = document.body.querySelector<HTMLInputElement>('.theia-ChatModelSelector-search')!;
         Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(input, 'mini');
         flushSync(() => input.dispatchEvent(new window.Event('input', { bubbles: true })));
-        expect(Array.from(container.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim())).to.deep.equal(['GPT Mini']);
+        expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim())).to.deep.equal(['GPT Mini']);
+    });
+
+    it('keeps the portal open while scrolling and switches groups on click', () => {
+        flushSync(() => root.render(<ChatModelSelector entries={entries} currentModelId='tensorgrid/gpt-sol' onModelChange={() => undefined} />));
+        flushSync(() => container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!.click());
+
+        const modelList = document.body.querySelector<HTMLElement>('.theia-ChatModelSelector-model-list')!;
+        flushSync(() => modelList.dispatchEvent(new modelList.ownerDocument.defaultView!.Event('scroll', { bubbles: true })));
+        expect(document.body.querySelector('[role="dialog"]')).to.exist;
+
+        const claudeGroup = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'))
+            .find(group => group.textContent?.includes('ClaudePro'))!;
+        flushSync(() => claudeGroup.click());
+        expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim()))
+            .to.deep.equal(['Claude Opus']);
     });
 
     it('selects with Enter and restores trigger focus with Escape', () => {
@@ -97,9 +113,9 @@ describe('ChatModelSelector', () => {
         const trigger = container.querySelector<HTMLButtonElement>('.theia-ChatModelSelector-trigger')!;
         trigger.focus();
         flushSync(() => trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
-        expect(container.querySelector('[role="dialog"]')).to.exist;
+        expect(document.body.querySelector('[role="dialog"]')).to.exist;
         flushSync(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
-        expect(container.querySelector('[role="dialog"]')).not.to.exist;
+        expect(document.body.querySelector('[role="dialog"]')).not.to.exist;
         expect(document.activeElement).to.equal(trigger);
     });
 });

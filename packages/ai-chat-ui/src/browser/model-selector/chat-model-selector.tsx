@@ -5,6 +5,7 @@
 // *****************************************************************************
 
 import * as React from '@theia/core/shared/react';
+import { createPortal } from '@theia/core/shared/react-dom';
 import {
     compareLanguageModelSelectorEntries,
     compareLanguageModelSelectorGroups,
@@ -20,6 +21,12 @@ export interface ChatModelSelectorProps {
 }
 
 const normalize = (value: string): string => value.toLocaleLowerCase();
+
+interface PopoverPosition {
+    readonly right: number;
+    readonly bottom: number;
+    readonly maxHeight: number;
+}
 
 export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> = React.memo(({
     entries,
@@ -38,8 +45,11 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
     const [open, setOpen] = React.useState(false);
     const [activeGroupId, setActiveGroupId] = React.useState(selectedEntry?.metadata.group.id ?? groups[0]?.id);
     const [search, setSearch] = React.useState('');
+    const [popoverPosition, setPopoverPosition] = React.useState<PopoverPosition>();
     // eslint-disable-next-line no-null/no-null
     const rootRef = React.useRef<HTMLDivElement>(null);
+    // eslint-disable-next-line no-null/no-null
+    const popoverRef = React.useRef<HTMLDivElement>(null);
     // eslint-disable-next-line no-null/no-null
     const triggerRef = React.useRef<HTMLButtonElement>(null);
     // eslint-disable-next-line no-null/no-null
@@ -71,9 +81,19 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
     }, []);
 
     const openSelector = React.useCallback(() => {
-        if (disabled || entries.length === 0) {
+        const trigger = triggerRef.current;
+        if (disabled || entries.length === 0 || !trigger) {
             return;
         }
+        const hostWindow = trigger.ownerDocument.defaultView ?? window;
+        const triggerRect = trigger.getBoundingClientRect();
+        const width = Math.min(680, hostWindow.innerWidth - 32);
+        const right = hostWindow.innerWidth - triggerRect.right;
+        setPopoverPosition({
+            right: Math.max(16, Math.min(right, hostWindow.innerWidth - width - 16)),
+            bottom: hostWindow.innerHeight - triggerRect.top + 10,
+            maxHeight: Math.max(160, Math.min(520, triggerRect.top - 26)),
+        });
         setActiveGroupId(selectedEntry?.metadata.group.id ?? groups[0]?.id);
         setOpen(true);
         queueMicrotask(() => searchRef.current?.focus());
@@ -90,15 +110,20 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
             }
         };
         const onDocumentPointerDown = (event: MouseEvent): void => {
-            if (!rootRef.current?.contains(event.target as Node)) {
+            if (!rootRef.current?.contains(event.target as Node) && !popoverRef.current?.contains(event.target as Node)) {
                 close(false);
             }
         };
-        document.addEventListener('keydown', onDocumentKeyDown);
-        document.addEventListener('mousedown', onDocumentPointerDown);
+        const hostDocument = triggerRef.current?.ownerDocument ?? document;
+        const hostWindow = hostDocument.defaultView ?? window;
+        const closeOnLayoutChange = (): void => close(false);
+        hostDocument.addEventListener('keydown', onDocumentKeyDown);
+        hostDocument.addEventListener('mousedown', onDocumentPointerDown);
+        hostWindow.addEventListener('resize', closeOnLayoutChange);
         return () => {
-            document.removeEventListener('keydown', onDocumentKeyDown);
-            document.removeEventListener('mousedown', onDocumentPointerDown);
+            hostDocument.removeEventListener('keydown', onDocumentKeyDown);
+            hostDocument.removeEventListener('mousedown', onDocumentPointerDown);
+            hostWindow.removeEventListener('resize', closeOnLayoutChange);
         };
     }, [open, close]);
 
@@ -142,7 +167,13 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
             {triggerGroup && <span className='theia-ChatModelSelector-trigger-group'>{triggerGroup}</span>}
             <span className='codicon codicon-chevron-down' aria-hidden='true' />
         </button>
-        {open && <div className='theia-ChatModelSelector-popover' role='dialog' aria-label='Select language model'>
+        {open && popoverPosition && createPortal(<div
+            ref={popoverRef}
+            className='theia-ChatModelSelector-popover'
+            role='dialog'
+            aria-label='Select language model'
+            style={popoverPosition}
+        >
             <section className='theia-ChatModelSelector-groups'>
                 <h3>Model Group</h3>
                 <div role='listbox' aria-label='Model groups'>
@@ -215,6 +246,6 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
                     {visibleModels.length === 0 && <p className='theia-ChatModelSelector-empty'>No matching models</p>}
                 </div>
             </section>
-        </div>}
+        </div>, triggerRef.current?.ownerDocument.body ?? document.body)}
     </div>;
 });

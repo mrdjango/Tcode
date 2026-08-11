@@ -1058,10 +1058,8 @@ div:last-child>.theia-ChatNode {
 }
 
 .theia-ChatModelSelector-popover {
-  position: absolute;
-  z-index: 1000;
-  right: 0;
-  bottom: calc(100% + 10px);
+  position: fixed;
+  z-index: 6000;
   display: grid;
   grid-template-columns: minmax(150px, 0.7fr) minmax(280px, 1.6fr);
   width: min(680px, calc(100vw - 32px));
