@@ -13,7 +13,7 @@ const workflowPath = path.join(root, '.github/workflows/release-desktop.yml');
 test('desktop packaging exposes production and distribution commands', () => {
     assert.equal(electronPackage.scripts['build:prod'], 'theiaext build && npm run -s bundle:prod');
     assert.equal(electronPackage.scripts['bundle:prod'], 'npm run rebuild && theia build --app-target=electron --mode production');
-    assert.equal(electronPackage.scripts.dist, 'npm run clean:dist && npm run build:prod && electron-builder --publish never');
+    assert.equal(electronPackage.scripts.dist, 'npm run clean:dist && npm run build:prod && electron-builder --config electron-builder.yml --publish never');
     assert.equal(electronPackage.devDependencies['electron-builder'], '26.0.12');
     assert.match(rootPackage.scripts['clean:release'], /tsbuildinfo/);
 });
