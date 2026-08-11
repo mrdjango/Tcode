@@ -13,6 +13,7 @@ const packagerPackagePath = path.join(packagerPath, 'package.json');
 const packagerLockPath = path.join(packagerPath, 'package-lock.json');
 const configPath = path.join(root, 'examples/electron/electron-builder.yml');
 const workflowPath = path.join(root, '.github/workflows/release-desktop.yml');
+const milestoneWorkflowPath = path.join(root, '.github/workflows/set-milestone-on-pr.yml');
 
 test('desktop packaging exposes production and distribution commands', () => {
     assert.equal(electronPackage.scripts['build:prod'], 'theiaext build && npm run -s bundle:prod');
@@ -91,4 +92,11 @@ test('tag builds aggregate artifacts into a draft GitHub release', () => {
     assert.match(publish.run, /--draft/);
     assert.match(publish.run, /SHA256SUMS/);
     assert.match(publish.run, /unsigned/i);
+});
+
+test('milestone workflow can read merged package metadata', () => {
+    const workflow = yaml.load(fs.readFileSync(milestoneWorkflowPath, 'utf8'));
+    assert.equal(workflow.permissions.contents, 'read');
+    assert.equal(workflow.permissions.issues, 'write');
+    assert.equal(workflow.permissions['pull-requests'], 'write');
 });
