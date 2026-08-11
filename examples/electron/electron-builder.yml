@@ -1,0 +1,60 @@
+appId: com.tensorgrid.tcode
+productName: Tcode
+copyright: Copyright © 2026 TensorGrid
+electronDist: ../../node_modules/electron/dist
+electronVersion: 42.3.0
+asar: true
+asarUnpack:
+  - "**/lib/backend/native/**"
+  - "**/lib/backend/shell-integrations/**"
+  - "**/lib/prebuilds/**"
+nodeGypRebuild: false
+npmRebuild: false
+
+directories:
+  buildResources: resources
+  output: dist
+
+files:
+  - src-gen
+  - lib
+  - resources
+  - package.json
+  - "!**/node_modules/**"
+
+extraResources:
+  - from: ../../plugins
+    to: app/plugins
+
+mac:
+  identity: "-"
+  notarize: false
+  category: public.app-category.developer-tools
+  protocols:
+    - name: Tcode
+      schemes:
+        - tcode
+  target:
+    - dmg
+    - zip
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+
+win:
+  signAndEditExecutable: false
+  target:
+    - nsis
+  artifactName: "${productName}-${version}-windows-${arch}.${ext}"
+
+linux:
+  category: Development
+  vendor: TensorGrid
+  target:
+    - AppImage
+    - deb
+  artifactName: "${productName}-${version}-linux-${arch}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: false
