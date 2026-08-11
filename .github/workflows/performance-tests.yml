@@ -7,7 +7,7 @@ jobs:
   build-and-test-performance:
     name: Performance Tests
 
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     timeout-minutes: 30
 
     steps:

@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build API Documentation
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-4vcpu-ubuntu-2204
 
     # The current approach is silly. We should be smarter and use `actions/upload-artifact` and `actions/download-artifact` instead of rebuilding
     # everything from scratch again. (git checkout, Node.js install, npm, etc.) It was not possible to share artifacts on Travis CI without an
@@ -55,7 +55,7 @@ jobs:
   deploy:
     name: Deploy API documentation to GitHub Pages
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     environment: github-pages
     steps:
       - name: Deploy to GitHub Pages

@@ -23,7 +23,7 @@ jobs:
   build-and-test-playwright:
     name: Playwright Tests (ubuntu-22.04,  Node.js 22.x)
 
-    runs-on: ubuntu-22.04
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     timeout-minutes: 60
 
     steps:
