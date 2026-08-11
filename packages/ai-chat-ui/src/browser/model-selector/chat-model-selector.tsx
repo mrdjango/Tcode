@@ -173,6 +173,7 @@ export const ChatModelSelector: React.FunctionComponent<ChatModelSelectorProps> 
             role='dialog'
             aria-label='Select language model'
             style={popoverPosition}
+            onMouseDown={event => event.stopPropagation()}
         >
             <section className='theia-ChatModelSelector-groups'>
                 <h3>Model Group</h3>

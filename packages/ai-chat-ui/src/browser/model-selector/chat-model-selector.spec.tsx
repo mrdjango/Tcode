@@ -99,6 +99,7 @@ describe('ChatModelSelector', () => {
         const claudeGroup = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.theia-ChatModelSelector-group'))
             .find(group => group.textContent?.includes('ClaudePro'))!;
         flushSync(() => claudeGroup.click());
+        expect(document.body.querySelector('[role="dialog"]')).to.exist;
         expect(Array.from(document.body.querySelectorAll('.theia-ChatModelSelector-model')).map(node => node.textContent?.trim()))
             .to.deep.equal(['Claude Opus']);
     });
