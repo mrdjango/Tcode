@@ -17,6 +17,7 @@ examples/*/gen-webpack.config.js
 examples/*/gen-webpack.node.config.js
 examples/*/gen-esbuild.*.mjs
 examples/*/.test
+examples/electron/dist/
 .browser_modules
 **/docs/api
 package-backup.json

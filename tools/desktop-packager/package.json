@@ -1,0 +1,11 @@
+{
+  "name": "@tcode/desktop-packager",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "package": "electron-builder --projectDir ../../examples/electron --config ../../examples/electron/electron-builder.yml --publish never"
+  },
+  "devDependencies": {
+    "electron-builder": "26.0.12"
+  }
+}

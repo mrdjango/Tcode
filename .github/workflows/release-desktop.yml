@@ -1,0 +1,152 @@
+name: Release desktop applications
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to embed in manually built artifacts (for example, 1.2.3)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+            target: --mac --arm64
+            artifact: tcode-macos-arm64
+            artifact_paths: |
+              examples/electron/dist/*.dmg
+              examples/electron/dist/*.zip
+          - os: macos-15-intel
+            arch: x64
+            target: --mac --x64
+            artifact: tcode-macos-x64
+            artifact_paths: |
+              examples/electron/dist/*.dmg
+              examples/electron/dist/*.zip
+          - os: windows-2022
+            arch: x64
+            target: --win --x64
+            artifact: tcode-windows-x64
+            artifact_paths: examples/electron/dist/*.exe
+          - os: ubuntu-22.04
+            arch: x64
+            target: --linux --x64
+            artifact: tcode-linux-x64
+            artifact_paths: |
+              examples/electron/dist/*.AppImage
+              examples/electron/dist/*.deb
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 24.15.0
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install desktop packager
+        run: npm ci --prefix tools/desktop-packager
+
+      - name: Clear stale TypeScript metadata
+        run: npm run clean:release
+
+      - name: Compile workspaces
+        run: npm run compile
+        env:
+          NX_SKIP_NX_CACHE: "true"
+
+      - name: Download editor plugins
+        run: npm run download:plugins
+
+      - name: Set application version
+        shell: bash
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${MANUAL_VERSION}"
+          fi
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: ${VERSION}" >&2
+            exit 1
+          fi
+          npm pkg set "version=${VERSION}" --workspace @theia/example-electron
+
+      - name: Package desktop application
+        shell: bash
+        run: npm run dist --workspace @theia/example-electron -- ${{ matrix.target }}
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Create draft GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          cd ..
+
+          cat > release-notes.md <<'NOTES'
+          ## Installation warning
+
+          These preview builds are unsigned. macOS Gatekeeper and Windows SmartScreen may show a warning on first launch. Verify the downloaded file against `SHA256SUMS` before installing.
+          NOTES
+
+          if ! gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release create "${TAG}" --draft --verify-tag --generate-notes --notes-file release-notes.md
+          fi
+          gh release upload "${TAG}" release-assets/* --clobber

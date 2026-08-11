@@ -39,6 +39,7 @@
     }
   },
   "dependencies": {
+    "@tcode/tensorgrid-ai": "1.74.0-tcode.1",
     "@theia/ai-anthropic": "1.74.0",
     "@theia/ai-chat": "1.74.0",
     "@theia/ai-chat-ui": "1.74.0",
@@ -62,7 +63,6 @@
     "@theia/ai-registry": "1.74.0",
     "@theia/ai-scanoss": "1.74.0",
     "@theia/ai-terminal": "1.74.0",
-    "@tcode/tensorgrid-ai": "1.74.0-tcode.1",
     "@theia/ai-tool-sketchpad": "1.74.0",
     "@theia/api-provider-sample": "1.74.0",
     "@theia/api-samples": "1.74.0",
@@ -118,9 +118,13 @@
   },
   "scripts": {
     "build": "theiaext build && npm run -s bundle",
+    "build:prod": "theiaext build && npm run -s bundle:prod",
     "bundle": "npm run rebuild && theia build --mode development",
+    "bundle:prod": "npm run rebuild && theia build --app-target=electron --mode production",
     "clean": "theiaext clean",
+    "clean:dist": "rimraf dist",
     "compile": "tsc -b",
+    "dist": "npm run clean:dist && npm run build:prod && npm --prefix ../../tools/desktop-packager run package --",
     "lint": "theiaext lint",
     "rebuild": "theia rebuild:electron --cacheRoot ../..",
     "start": "theia start --plugins=local-dir:../../plugins --ovsx-router-config=../ovsx-router-config.json",
