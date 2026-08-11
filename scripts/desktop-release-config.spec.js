@@ -6,16 +6,33 @@ const yaml = require('js-yaml');
 
 const root = path.resolve(__dirname, '..');
 const rootPackage = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const rootLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 const electronPackage = JSON.parse(fs.readFileSync(path.join(root, 'examples/electron/package.json'), 'utf8'));
+const packagerPath = path.join(root, 'tools/desktop-packager');
+const packagerPackagePath = path.join(packagerPath, 'package.json');
+const packagerLockPath = path.join(packagerPath, 'package-lock.json');
 const configPath = path.join(root, 'examples/electron/electron-builder.yml');
 const workflowPath = path.join(root, '.github/workflows/release-desktop.yml');
 
 test('desktop packaging exposes production and distribution commands', () => {
     assert.equal(electronPackage.scripts['build:prod'], 'theiaext build && npm run -s bundle:prod');
     assert.equal(electronPackage.scripts['bundle:prod'], 'npm run rebuild && theia build --app-target=electron --mode production');
-    assert.equal(electronPackage.scripts.dist, 'npm run clean:dist && npm run build:prod && electron-builder --config electron-builder.yml --publish never');
-    assert.equal(electronPackage.devDependencies['electron-builder'], '26.0.12');
+    assert.equal(electronPackage.scripts.dist, 'npm run clean:dist && npm run build:prod && npm --prefix ../../tools/desktop-packager run package --');
     assert.match(rootPackage.scripts['clean:release'], /tsbuildinfo/);
+});
+
+test('desktop packager dependencies are isolated from the application workspace', () => {
+    assert.equal(fs.existsSync(packagerPackagePath), true, 'desktop packager package.json must exist');
+    assert.equal(fs.existsSync(packagerLockPath), true, 'desktop packager lockfile must exist');
+
+    const packagerPackage = JSON.parse(fs.readFileSync(packagerPackagePath, 'utf8'));
+    const packagerLock = JSON.parse(fs.readFileSync(packagerLockPath, 'utf8'));
+    assert.equal(electronPackage.devDependencies?.['electron-builder'], undefined);
+    assert.equal(packagerPackage.devDependencies['electron-builder'], '26.0.12');
+    assert.equal(rootPackage.allowScripts?.['electron-winstaller'], undefined);
+    assert.equal(rootLock.packages['node_modules/electron-builder'], undefined);
+    assert.equal(rootLock.packages['node_modules/@electron/node-gyp'], undefined);
+    assert.equal(packagerLock.packages['node_modules/@electron/node-gyp'].version, '10.2.0-electron.1');
 });
 
 test('desktop packaging produces the required unsigned platform targets', () => {
@@ -49,11 +66,14 @@ test('desktop release workflow builds every supported runner and architecture', 
     ]);
 
     const stepNames = build.steps.map(step => step.name);
+    const installIndex = stepNames.indexOf('Install dependencies');
+    const packagerInstallIndex = stepNames.indexOf('Install desktop packager');
     const cleanIndex = stepNames.indexOf('Clear stale TypeScript metadata');
     const compileIndex = stepNames.indexOf('Compile workspaces');
     const pluginsIndex = stepNames.indexOf('Download editor plugins');
     const packageIndex = stepNames.indexOf('Package desktop application');
-    assert.ok(cleanIndex >= 0 && cleanIndex < compileIndex);
+    assert.ok(installIndex >= 0 && installIndex < packagerInstallIndex);
+    assert.ok(packagerInstallIndex < cleanIndex && cleanIndex < compileIndex);
     assert.ok(compileIndex < pluginsIndex && pluginsIndex < packageIndex);
     assert.match(build.steps[packageIndex].run, /npm run dist --workspace @theia\/example-electron/);
     assert.ok(build.steps.some(step => String(step.uses).startsWith('actions/upload-artifact@')));

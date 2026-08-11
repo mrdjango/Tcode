@@ -124,7 +124,7 @@
     "clean": "theiaext clean",
     "clean:dist": "rimraf dist",
     "compile": "tsc -b",
-    "dist": "npm run clean:dist && npm run build:prod && electron-builder --config electron-builder.yml --publish never",
+    "dist": "npm run clean:dist && npm run build:prod && npm --prefix ../../tools/desktop-packager run package --",
     "lint": "theiaext lint",
     "rebuild": "theia rebuild:electron --cacheRoot ../..",
     "start": "theia start --plugins=local-dir:../../plugins --ovsx-router-config=../ovsx-router-config.json",
@@ -137,7 +137,6 @@
   },
   "devDependencies": {
     "@theia/cli": "1.74.0",
-    "electron": "42.3.0",
-    "electron-builder": "26.0.12"
+    "electron": "42.3.0"
   }
 }

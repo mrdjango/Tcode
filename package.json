@@ -137,7 +137,6 @@
     "core-js": false,
     "cpu-features": true,
     "drivelist": true,
-    "electron-winstaller": true,
     "esbuild": true,
     "fsevents": true,
     "keytar": true,
