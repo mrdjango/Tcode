@@ -43,3 +43,4 @@ license-check-summary.txt*
 dist-arm64/
 graphify-out/
 .superpowers/
+.worktrees/
