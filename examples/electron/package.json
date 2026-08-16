@@ -27,7 +27,10 @@
         "reloadOnReconnect": true,
         "electron": {
           "uriScheme": "tcode",
-          "appUserModelId": "TensorGrid.Tcode"
+          "appUserModelId": "TensorGrid.Tcode",
+          "windowOptions": {
+            "icon": "resources/tensorgrid-mark.ico"
+          }
         }
       }
     },

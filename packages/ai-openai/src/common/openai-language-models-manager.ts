@@ -37,6 +37,8 @@ export interface OpenAiModelDescription {
     maxRetries: number;
     /** Use the newer OpenAI Response API instead of the Chat Completion API. Default is `false`. */
     useResponseApi?: boolean;
+    /** Whether a failed Responses API request may fall back to Chat Completions. Defaults to `true`. */
+    responseApiFallbackToChat?: boolean;
     /** Indicate whether the streaming API shall be used. Defaults from the model id when unset. */
     enableStreaming?: boolean;
     /**

@@ -16,8 +16,20 @@ export class TensorGridAuthUriHandler implements OpenHandler {
     async open(uri: URI): Promise<object | undefined> {
         this.windows.focus(); const callback = uri.toString(true);
         if (this.handled.has(callback)) return undefined;
-        try { await this.service.completeLogin(callback); this.handled.add(callback); this.messages.info(nls.localize('tcode/tensorgrid/loginSucceeded', 'Signed in to TensorGrid.')); }
-        catch (error) { this.messages.error(nls.localize('tcode/tensorgrid/loginFailed', 'TensorGrid sign-in failed: {0}', error instanceof Error ? error.message : String(error))); }
+        try {
+            await this.service.completeLogin(callback);
+            this.messages.info(nls.localize('tcode/tensorgrid/loginSucceeded', 'Signed in to TensorGrid.'));
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : '';
+            const message = detail.includes('cancelled')
+                ? 'TensorGrid authorization was cancelled.'
+                : detail.includes('expired') || detail.includes('invalid')
+                    ? 'The TensorGrid authorization link is invalid or expired.'
+                    : 'TensorGrid sign-in could not be completed. Try again.';
+            this.messages.error(nls.localize('tcode/tensorgrid/loginFailed', message));
+        } finally {
+            this.handled.add(callback);
+        }
         return undefined;
     }
 }

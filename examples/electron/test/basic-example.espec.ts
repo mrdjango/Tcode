@@ -25,7 +25,7 @@ const expect = chai.expect;
 const electronExampleDir = path.resolve(__dirname, '..', '..', '..');
 
 describe('basic-example-spec', function (): void {
-    this.timeout(60_000);
+    this.timeout(120_000);
 
     let server: http.Server | undefined;
     let mainWindow: BrowserWindow | undefined;
@@ -73,14 +73,59 @@ describe('basic-example-spec', function (): void {
             show: false,
             webPreferences: {
                 nodeIntegration: false,
-                contextIsolation: true
+                contextIsolation: true,
+                preload: path.join(electronExampleDir, 'lib', 'frontend', 'preload.js')
             }
         });
 
-        const url = `http://localhost:${address.port}`;
+        const url = `http://127.0.0.1:${address.port}`;
         await mainWindow.loadURL(url);
 
         const title = mainWindow.webContents.getTitle();
         expect(title).to.include('Tcode');
+
+        const branding = await mainWindow.webContents.executeJavaScript(`new Promise(resolve => {
+            const deadline = Date.now() + 30_000;
+            const inspect = () => {
+                const logo = document.querySelector('.theia-icon');
+                const gateLogo = document.querySelector('.tensorgrid-auth-gate .tensorgrid-brand-mark');
+                const visibleLogo = logo || gateLogo;
+                if (visibleLogo || Date.now() >= deadline) {
+                    resolve({
+                        exists: !!visibleLogo,
+                        navbarExists: !!logo,
+                        backgroundImage: visibleLogo ? getComputedStyle(visibleLogo).backgroundImage : ''
+                    });
+                    return;
+                }
+                setTimeout(inspect, 50);
+            };
+            inspect();
+        })`);
+
+        expect(branding.exists).to.equal(true);
+        expect(branding.backgroundImage).to.match(/data:image\/png;base64|url\(/);
+
+        const authGate = await mainWindow.webContents.executeJavaScript(`new Promise(resolve => {
+            const deadline = Date.now() + 30_000;
+            const inspect = () => {
+                const gate = document.querySelector('.tensorgrid-auth-gate');
+                const shell = document.querySelector('.theia-ApplicationShell');
+                if (gate || Date.now() >= deadline) {
+                    resolve({
+                        exists: !!gate,
+                        locked: document.documentElement.classList.contains('tensorgrid-auth-locked'),
+                        shellInert: !shell || shell.inert === true
+                    });
+                    return;
+                }
+                setTimeout(inspect, 50);
+            };
+            inspect();
+        })`);
+
+        expect(authGate.exists).to.equal(true);
+        expect(authGate.locked).to.equal(true);
+        expect(authGate.shellInert).to.equal(true);
     });
 });

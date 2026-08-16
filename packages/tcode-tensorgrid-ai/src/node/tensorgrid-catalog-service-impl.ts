@@ -1,9 +1,9 @@
 import { Emitter, Event } from '@theia/core';
 import { KeyStoreService } from '@theia/core/lib/common/key-store';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { createCodeChallenge, createCodeVerifier, TensorGridAuthRequest, TensorGridAuthState, TensorGridCatalogModel, TensorGridCatalogService, TENSORGRID_CALLBACK_URI, TENSORGRID_LOGIN_URL, TENSORGRID_OPENAI_BASE_URL } from '../common';
+import { createCodeChallenge, createCodeVerifier, TensorGridAuthRequest, TensorGridAuthState, TensorGridCatalogModel, TensorGridCatalogService, TENSORGRID_CALLBACK_URI, TENSORGRID_EXCHANGE_URL, TENSORGRID_LOGIN_URL, TENSORGRID_OPENAI_BASE_URL, TENSORGRID_REVOKE_URL } from '../common';
 
-interface StoredCredentials { apiKey: string; accountLabel?: string; }
+interface StoredCredentials { apiKey: string; accountLabel?: string; keyId?: string; scopes?: string[]; expiresAt?: string; }
 interface PendingLogin { state: string; codeVerifier: string; }
 interface CatalogResponse {
     object?: string;
@@ -22,6 +22,7 @@ interface CatalogResponse {
 const KEYSTORE_SERVICE = 'theia-tcode';
 const KEYSTORE_ACCOUNT = 'tensorgrid-session';
 const KEYSTORE_PENDING_ACCOUNT = 'tensorgrid-pending-login';
+const REVOKE_TIMEOUT_MS = 5_000;
 
 const nonEmptyString = (value: unknown): string | undefined =>
     typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -92,9 +93,9 @@ export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
     readonly onAuthStateChanged: Event<TensorGridAuthState> = this.authChanged.event;
 
     async getApiKey(): Promise<string | undefined> {
-        const raw = await this.keyStoreService.getPassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT);
-        if (!raw) { return undefined; }
-        try { return (JSON.parse(raw) as StoredCredentials).apiKey; } catch { return undefined; }
+        const credentials = await this.readCredentials();
+        if (!credentials || !this.isCredentialUsable(credentials)) { return undefined; }
+        return credentials.apiKey;
     }
 
     async beginLogin(): Promise<TensorGridAuthRequest> {
@@ -112,23 +113,43 @@ export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
         const callback = new URL(callbackUrl);
         if (callback.protocol !== 'tcode:' || callback.hostname.toLowerCase() !== 'tensorgrid' || callback.pathname !== '/auth') throw new Error('Unexpected TensorGrid authentication callback.');
         const pendingRaw = await this.keyStoreService.getPassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT);
-        const pending = pendingRaw ? JSON.parse(pendingRaw) as PendingLogin : undefined;
-        const code = callback.searchParams.get('code'); const state = callback.searchParams.get('state');
-        if (!code || !pending || state !== pending.state) throw new Error('TensorGrid authentication state is invalid or expired.');
-        const response = await fetch('https://tensorgrid.space/api/model-hub/tcode/exchange/', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ code, code_verifier: pending.codeVerifier }) });
-        await this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT);
-        if (!response.ok) throw new Error(`TensorGrid sign-in failed (${response.status}).`);
-        const data = await response.json() as { token?: string; user?: { email?: string } };
-        if (!data.token?.startsWith('sk-')) throw new Error('TensorGrid authentication did not return a usable API key.');
-        await this.keyStoreService.setPassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT, JSON.stringify({ apiKey: data.token, accountLabel: data.user?.email } satisfies StoredCredentials));
-        const result = { isAuthenticated: true, accountLabel: data.user?.email };
-        this.authChanged.fire(result); return result;
+        let pending: PendingLogin | undefined;
+        try { pending = pendingRaw ? JSON.parse(pendingRaw) as PendingLogin : undefined; } catch { pending = undefined; }
+        const state = callback.searchParams.get('state');
+        if (!pending || state !== pending.state) throw new Error('TensorGrid authentication state is invalid or expired.');
+        const callbackError = callback.searchParams.get('error');
+        if (callbackError) {
+            try { await this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT); } catch { /* best effort cleanup */ }
+            throw new Error(callbackError === 'access_denied' ? 'TensorGrid authorization was cancelled.' : 'TensorGrid authorization failed.');
+        }
+        const code = callback.searchParams.get('code');
+        if (!code) throw new Error('TensorGrid authentication state is invalid or expired.');
+        try {
+            const response = await fetch(TENSORGRID_EXCHANGE_URL, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ code, code_verifier: pending.codeVerifier }) });
+            if (!response.ok) {
+                throw new Error(response.status === 400 ? 'The TensorGrid authorization code is invalid or expired.' : `TensorGrid sign-in failed (${response.status}).`);
+            }
+            const data = await response.json() as { id?: unknown; token?: unknown; scopes?: unknown; expires_at?: unknown; user?: { email?: unknown } };
+            const token = typeof data.token === 'string' ? data.token : undefined;
+            const keyId = typeof data.id === 'string' && data.id ? data.id : undefined;
+            const scopes = Array.isArray(data.scopes) && data.scopes.every(scope => typeof scope === 'string') ? data.scopes as string[] : undefined;
+            const expiresAt = typeof data.expires_at === 'string' && data.expires_at ? data.expires_at : undefined;
+            const accountLabel = typeof data.user?.email === 'string' && data.user.email ? data.user.email : undefined;
+            if (!token || !/^sk-[A-Za-z0-9_-]+-[A-Za-z0-9_-]+$/.test(token) || !keyId || !scopes?.includes('inference:invoke') || !expiresAt || !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now()) {
+                throw new Error('TensorGrid authentication did not return a valid scoped credential.');
+            }
+            await this.keyStoreService.setPassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT, JSON.stringify({ apiKey: token, keyId, scopes, expiresAt, accountLabel } satisfies StoredCredentials));
+            const result = { isAuthenticated: true, accountLabel, expiresAt };
+            this.authChanged.fire(result); return result;
+        } finally {
+            try { await this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT); } catch { /* best effort cleanup */ }
+        }
     }
 
     async getAuthState(): Promise<TensorGridAuthState> {
-        const raw = await this.keyStoreService.getPassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT);
-        if (!raw) return { isAuthenticated: false };
-        try { const value = JSON.parse(raw) as StoredCredentials; return { isAuthenticated: !!value.apiKey, accountLabel: value.accountLabel }; } catch { return { isAuthenticated: false }; }
+        const credentials = await this.readCredentials();
+        if (!credentials || !this.isCredentialUsable(credentials)) return { isAuthenticated: false };
+        return { isAuthenticated: true, accountLabel: credentials.accountLabel, expiresAt: credentials.expiresAt };
     }
 
     async getCatalog(): Promise<TensorGridCatalogModel[]> {
@@ -144,8 +165,41 @@ export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
     }
 
     async logout(): Promise<void> {
-        await this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT);
-        await this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT);
+        let credentials: StoredCredentials | undefined;
+        try { credentials = await this.readCredentials(); } catch { /* local cleanup still takes priority */ }
+        if (credentials && this.isCredentialShapeValid(credentials)) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), REVOKE_TIMEOUT_MS);
+            try {
+                await fetch(TENSORGRID_REVOKE_URL, { method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${credentials.apiKey}` }, signal: controller.signal });
+            } catch {
+                // Local sign-out must complete even when the network is unavailable.
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+        await Promise.allSettled([
+            this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT),
+            this.keyStoreService.deletePassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT),
+        ]);
         this.authChanged.fire({ isAuthenticated: false });
+    }
+
+    protected async readCredentials(): Promise<StoredCredentials | undefined> {
+        const raw = await this.keyStoreService.getPassword(KEYSTORE_SERVICE, KEYSTORE_ACCOUNT);
+        if (!raw) { return undefined; }
+        try {
+            const value = JSON.parse(raw) as StoredCredentials;
+            return this.isCredentialShapeValid(value) ? value : undefined;
+        } catch { return undefined; }
+    }
+
+    protected isCredentialShapeValid(value: StoredCredentials): boolean {
+        return typeof value.apiKey === 'string' && /^sk-[A-Za-z0-9_-]+-[A-Za-z0-9_-]+$/.test(value.apiKey);
+    }
+
+    protected isCredentialUsable(value: StoredCredentials): boolean {
+        if (!this.isCredentialShapeValid(value)) { return false; }
+        return typeof value.expiresAt === 'string' && Number.isFinite(Date.parse(value.expiresAt)) && Date.parse(value.expiresAt) > Date.now();
     }
 }

@@ -118,7 +118,8 @@ export class OpenAiModel implements LanguageModel {
         public serverTools?: ServerToolDescriptor[],
         public serverSideCompactionSupport: boolean = false,
         public serverSideCompactionEnabledByDefault: boolean = false,
-        public serverSideCompactionTokenThresholdByDefault?: number
+        public serverSideCompactionTokenThresholdByDefault?: number,
+        public responseApiFallbackToChat: boolean = true
     ) { }
 
     /** Reasoning-level translation lives in {@link openAiReasoningFor}. */
@@ -296,7 +297,7 @@ export class OpenAiModel implements LanguageModel {
             );
         } catch (error) {
             // Chat Completions cannot execute Response API server tools.
-            if (error instanceof Error && !request.serverTools?.length) {
+            if (this.responseApiFallbackToChat && error instanceof Error && !request.serverTools?.length) {
                 console.warn(`Response API failed for model ${this.id}, falling back to Chat Completions API:`, error.message);
                 return this.handleChatCompletionsRequest(openai, request, cancellationToken);
             }

@@ -230,10 +230,22 @@ blockquote {
 }
 
 .theia-icon {
-    width: 32px;
-    height: 18px;
-    margin: 5px;
-    margin-left: 8px;
+    width: 24px;
+    height: 24px;
+    margin: 2px 8px;
+}
+
+.theia-icon,
+.tensorgrid-brand-mark {
+    background-image: url("tensorgrid-mark.png");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.tensorgrid-brand-mark {
+    display: inline-block;
+    flex: 0 0 auto;
 }
 
 .theia-mod-disabled,

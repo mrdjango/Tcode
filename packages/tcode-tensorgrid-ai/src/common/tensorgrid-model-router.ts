@@ -1,7 +1,7 @@
 import { TensorGridCatalogModel, TENSORGRID_GOOGLE_BASE_URL, TENSORGRID_OPENAI_BASE_URL } from './tensorgrid-catalog-service';
 
 export type TensorGridRoute =
-    | { provider: 'openai'; id: string; model: string; url: string; useResponseApi: boolean }
+    | { provider: 'openai'; id: string; model: string; url: string; useResponseApi: boolean; responseApiFallbackToChat?: boolean }
     | { provider: 'anthropic'; id: string; model: string; url: string }
     | { provider: 'google'; id: string; model: string; baseURL: string; apiVersion: string }
     | { provider: 'skip'; reason: string };
@@ -29,7 +29,17 @@ export function routeTensorGridModel(entry: TensorGridCatalogModel): TensorGridR
     }
     const chat = supports(entry.endpointTypes, ['chat.completions', 'openai']);
     const responses = supports(entry.endpointTypes, ['responses', 'openai responses', 'openai-response']);
+    const isGpt = family.includes('gpt');
     return chat || responses
-        ? { provider: 'openai', id, model, url: TENSORGRID_OPENAI_BASE_URL, useResponseApi: responses && !chat }
+        ? {
+            provider: 'openai',
+            id,
+            model,
+            url: TENSORGRID_OPENAI_BASE_URL,
+            // TensorGrid GPT modes use the Responses endpoint even when the catalog
+            // also advertises the legacy Chat Completions endpoint.
+            useResponseApi: isGpt || responses,
+            responseApiFallbackToChat: !isGpt,
+        }
         : { provider: 'skip', reason: 'model lacks a compatible chat endpoint' };
 }

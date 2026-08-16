@@ -20,26 +20,53 @@ export class TensorGridModelContribution implements FrontendApplicationContribut
     protected readonly registered = new Map<string, 'openai' | 'anthropic' | 'google'>();
     protected selectorMetadata = new Map<string, LanguageModelSelectorMetadata>();
     protected refreshGeneration = 0;
+    protected activeRefresh?: Promise<boolean>;
+    protected queuedRefresh?: Promise<boolean>;
     protected readonly metadataChangedEmitter = new Emitter<void>();
     readonly onDidChange: Event<void> = this.metadataChangedEmitter.event;
 
     onStart(): void {
-        void this.refresh();
-        this.catalog.onAuthStateChanged(() => void this.refresh());
+        void this.refresh().catch(error => console.warn('TensorGrid: initial model refresh failed:', error));
+        this.catalog.onAuthStateChanged(() => void this.refresh().catch(error => console.warn('TensorGrid: model refresh failed:', error)));
     }
 
-    async refresh(): Promise<void> {
+    refresh(): Promise<boolean> {
+        if (this.activeRefresh) {
+            if (!this.queuedRefresh) {
+                this.queuedRefresh = this.activeRefresh.then(
+                    () => {
+                        this.queuedRefresh = undefined;
+                        return this.refresh();
+                    },
+                    () => {
+                        this.queuedRefresh = undefined;
+                        return this.refresh();
+                    },
+                );
+            }
+            return this.queuedRefresh;
+        }
+        const refresh = this.refreshOnce();
+        this.activeRefresh = refresh;
+        void refresh.then(
+            () => { if (this.activeRefresh === refresh) { this.activeRefresh = undefined; } },
+            () => { if (this.activeRefresh === refresh) { this.activeRefresh = undefined; } },
+        );
+        return refresh;
+    }
+
+    protected async refreshOnce(): Promise<boolean> {
         const generation = ++this.refreshGeneration;
         const apiKey = await this.catalog.getApiKey();
-        if (generation !== this.refreshGeneration) { return; }
-        if (!apiKey) { this.clear(); return; }
+        if (generation !== this.refreshGeneration) { return false; }
+        if (!apiKey) { this.clear(); return false; }
         let models;
         try { models = await this.catalog.getCatalog(); } catch (error) {
             console.warn('TensorGrid: catalog refresh failed:', error instanceof Error ? error.message : error);
             if (!(await this.catalog.getApiKey())) { this.clear(); }
-            return;
+            return false;
         }
-        if (generation !== this.refreshGeneration) { return; }
+        if (generation !== this.refreshGeneration) { return false; }
         const next = new Map<string, 'openai' | 'anthropic' | 'google'>();
         const nextMetadata = new Map<string, LanguageModelSelectorMetadata>();
         const openai = []; const anthropic = []; const google = [];
@@ -70,9 +97,10 @@ export class TensorGridModelContribution implements FrontendApplicationContribut
             this.anthropic.createOrUpdateLanguageModels(...anthropic),
             this.google.createOrUpdateLanguageModels(...google),
         ]);
-        if (generation !== this.refreshGeneration) { return; }
+        if (generation !== this.refreshGeneration) { return false; }
         this.registered.clear(); next.forEach((provider, id) => this.registered.set(id, provider));
         if (metadataChanged) { this.metadataChangedEmitter.fire(); }
+        return true;
     }
 
     canHandle(model: LanguageModel): number {

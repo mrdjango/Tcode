@@ -133,7 +133,7 @@ describe('OpenAiModel reasoning translation', () => {
 });
 
 describe('OpenAiModel Response API fallback', () => {
-    function createFailingModel(): TestableOpenAiModel {
+    function createFailingModel(responseApiFallbackToChat = true): TestableOpenAiModel {
         const responseApiUtils = {
             handleRequest: async () => { throw new Error('Response API unavailable'); }
         } as unknown as OpenAiResponseApiUtils;
@@ -142,7 +142,7 @@ describe('OpenAiModel Response API fallback', () => {
             () => 'test-key', () => undefined,
             false, undefined, undefined,
             new OpenAiModelUtils(), responseApiUtils,
-            'developer', 3, true
+            'developer', 3, true, undefined, undefined, undefined, undefined, undefined, undefined, undefined, responseApiFallbackToChat
         );
     }
 
@@ -176,6 +176,25 @@ describe('OpenAiModel Response API fallback', () => {
 
         expect(await model.callHandleResponseApiRequest(request)).to.deep.equal({ text: 'fallback' });
         expect(model.chatCompletionsRequests).to.equal(1);
+    });
+
+    it('can disable Chat Completions fallback for TensorGrid GPT modes', async () => {
+        const model = createFailingModel(false);
+        const request: UserRequest = {
+            sessionId: 'session-1',
+            requestId: 'request-1',
+            messages: []
+        };
+
+        let error: unknown;
+        try {
+            await model.callHandleResponseApiRequest(request);
+        } catch (caught) {
+            error = caught;
+        }
+
+        expect(error).to.be.instanceOf(Error).with.property('message', 'Response API unavailable');
+        expect(model.chatCompletionsRequests).to.equal(0);
     });
 });
 

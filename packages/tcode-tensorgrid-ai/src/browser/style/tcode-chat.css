@@ -80,6 +80,76 @@
   background: linear-gradient(to bottom, transparent, var(--theia-editor-background) 22%);
 }
 
+.tensorgrid-auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 60000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  box-sizing: border-box;
+  background: var(--theia-editor-background);
+  color: var(--theia-foreground);
+}
+
+.tensorgrid-auth-gate__card {
+  width: min(100%, 460px);
+  padding: 40px;
+  box-sizing: border-box;
+  border: 1px solid var(--theia-widget-border);
+  border-radius: 18px;
+  background: var(--theia-sideBar-background);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 26%);
+  text-align: center;
+}
+
+.tensorgrid-auth-gate__mark {
+  width: 84px;
+  height: 84px;
+  margin-bottom: 22px;
+}
+
+.tensorgrid-auth-gate h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.tensorgrid-auth-gate__description {
+  margin: 14px 0 22px;
+  color: var(--theia-descriptionForeground);
+  line-height: 1.6;
+}
+
+.tensorgrid-auth-gate__error {
+  margin: 0 0 20px;
+  color: var(--theia-errorForeground);
+  line-height: 1.5;
+}
+
+.tensorgrid-auth-gate__button {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--theia-button-background);
+  border-radius: 6px;
+  background: var(--theia-button-background);
+  color: var(--theia-button-foreground);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tensorgrid-auth-gate__button:hover {
+  background: var(--theia-button-hoverBackground);
+}
+
+.tensorgrid-auth-gate__button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .chat-view-widget .theia-ChatInput {
   margin-block-start: 0;
 }

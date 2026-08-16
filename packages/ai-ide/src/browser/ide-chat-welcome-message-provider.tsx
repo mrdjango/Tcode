@@ -31,33 +31,12 @@ import { AIActivationService } from '@theia/ai-core/lib/browser';
 import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
 import { WorkspaceCommands } from '@theia/workspace/lib/browser/workspace-commands';
 
-const TheiaIdeAiLogo = ({ width = 120, height = 120, className = '' }) =>
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 100 100"
-        width={width}
-        height={height}
-        className={className}
-    >
-        {/* Head: outline only */}
-        <rect x="22" y="24" width="56" height="44" rx="16"
-            fill="none" stroke="var(--theia-disabledForeground)" strokeWidth="2.5" />
-        {/* Antenna */}
-        <line x1="50" y1="24" x2="50" y2="16" stroke="var(--theia-disabledForeground)" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="50" cy="13" r="3" fill="var(--theia-disabledForeground)" />
-        {/* Ears: small strokes */}
-        <line x1="17" y1="39" x2="17" y2="53" stroke="var(--theia-disabledForeground)" strokeWidth="3" strokeLinecap="round" />
-        <line x1="83" y1="39" x2="83" y2="53" stroke="var(--theia-disabledForeground)" strokeWidth="3" strokeLinecap="round" />
-        {/* Eyes: small dots */}
-        <circle cx="39" cy="44" r="3.5" fill="var(--theia-disabledForeground)" />
-        <circle cx="61" cy="44" r="3.5" fill="var(--theia-disabledForeground)" />
-        {/* Mouth: subtle line */}
-        <path d="M42 55 Q50 60 58 55" fill="none" stroke="var(--theia-disabledForeground)" strokeWidth="2" strokeLinecap="round" />
-        {/* Chat dots */}
-        <circle cx="38" cy="84" r="1.5" fill="var(--theia-disabledForeground)" opacity="0.35" />
-        <circle cx="50" cy="84" r="2" fill="var(--theia-disabledForeground)" opacity="0.5" />
-        <circle cx="62" cy="84" r="2.5" fill="var(--theia-disabledForeground)" opacity="0.65" />
-    </svg>;
+const TensorGridBrandMark = ({ width = 120, height = 120, className = '' }) =>
+    <span
+        aria-hidden="true"
+        className={`tensorgrid-brand-mark ${className}`}
+        style={{ width, height }}
+    />;
 
 @injectable()
 export class IdeChatWelcomeMessageProvider implements ChatWelcomeMessageProvider {
@@ -269,7 +248,7 @@ export class IdeChatWelcomeMessageProvider implements ChatWelcomeMessageProvider
             // sessions list so the chat view still has identity, but skip the verbose
             // multi-paragraph tutorial.
             return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Compact'} key="normal-welcome-compact">
-                <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" width={64} height={64} />
+                <TensorGridBrandMark className="theia-WelcomeMessage-Logo" width={64} height={64} />
                 <LocalizedMarkdown
                     localizationKey="theia/ai/ide/chatWelcomeMessageShort"
                     defaultMarkdown={`
@@ -291,7 +270,7 @@ Use *@agent* to call a specialized agent and *#* (or {1}) to attach context. [Le
         // First-time user: original full-length onboarding with the larger logo and the
         // verbose agent/context paragraphs so the empty panel feels welcoming.
         return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Main'} key="normal-welcome">
-            <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" />
+            <TensorGridBrandMark className="theia-WelcomeMessage-Logo" />
             <LocalizedMarkdown
                 localizationKey="theia/ai/ide/chatWelcomeMessage"
                 defaultMarkdown={`
@@ -376,7 +355,7 @@ This typically happens in custom IDE distributions where Theia AI language model
         }
 
         return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Main'} key="setup-state">
-            <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" />
+            <TensorGridBrandMark className="theia-WelcomeMessage-Logo" />
             <LocalizedMarkdown
                 key="configure-provider-hasmodels"
                 localizationKey="theia/ai/ide/configureProvider"
@@ -432,7 +411,7 @@ Some agents (e.g. Claude Code) work without a provider. [Learn more](https://the
             .filter(agent => this.chatAgentService.getAgent(agent.id) !== undefined);
 
         return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Main theia-WelcomeMessage-AgentSelection'} key="agent-selection">
-            <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" />
+            <TensorGridBrandMark className="theia-WelcomeMessage-Logo" />
             <LocalizedMarkdown
                 localizationKey="theia/ai/ide/selectDefaultAgent"
                 defaultMarkdown={`
@@ -492,7 +471,7 @@ Choose the agent to use by default. You can always override this by mentioning *
 
     protected renderTrustRestrictedMessage(): React.ReactNode {
         return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Main theia-WelcomeMessage-Disabled'} key="trust-restricted-message">
-            <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" />
+            <TensorGridBrandMark className="theia-WelcomeMessage-Logo" />
             <div className="theia-WelcomeMessage-Content">
                 <h2>{nls.localize('theia/ai/ide/chatRestrictedMessage/title', 'AI Features are Restricted')}</h2>
             </div>
@@ -524,7 +503,7 @@ Choose the agent to use by default. You can always override this by mentioning *
         const openAiHistory = 'aiHistory:open';
 
         return <div className={'theia-WelcomeMessage theia-WelcomeMessage-Main theia-WelcomeMessage-Disabled'} key="disabled-message">
-            <TheiaIdeAiLogo className="theia-WelcomeMessage-Logo" />
+            <TensorGridBrandMark className="theia-WelcomeMessage-Logo" />
             <div className="theia-WelcomeMessage-Content">
                 <h2>{nls.localize('theia/ai/ide/chatDisabledMessage/title', 'AI Features are Disabled')}</h2>
             </div>

@@ -496,6 +496,18 @@ export class ElectronMainApplication {
     }
 
     protected getDefaultOptions(): TheiaBrowserWindowOptions {
+        const configuredWindowOptions = this.config.electron?.windowOptions || {};
+        const configuredIcon = configuredWindowOptions.icon;
+        const appRelativeIcon = typeof configuredIcon === 'string' && !path.isAbsolute(configuredIcon)
+            ? path.resolve(app.getAppPath(), configuredIcon)
+            : undefined;
+        const installedResourceIcon = typeof configuredIcon === 'string' && !path.isAbsolute(configuredIcon) && typeof process.resourcesPath === 'string'
+            ? path.resolve(process.resourcesPath, path.basename(configuredIcon))
+            : undefined;
+        const resolvedIcon = [installedResourceIcon, appRelativeIcon].find(icon => icon && existsSync(icon));
+        const windowOptions = resolvedIcon
+            ? { ...configuredWindowOptions, icon: resolvedIcon }
+            : configuredWindowOptions;
         return {
             show: false,
             title: this.config.applicationName,
@@ -513,7 +525,7 @@ export class ElectronMainApplication {
                 backgroundThrottling: false,
                 enableDeprecatedPaste: true
             },
-            ...this.config.electron?.windowOptions || {},
+            ...windowOptions,
         };
     }
 

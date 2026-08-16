@@ -19,10 +19,12 @@ export interface TensorGridCatalogModel {
     };
     ordering?: number;
 }
-export interface TensorGridAuthState { isAuthenticated: boolean; accountLabel?: string; }
+export interface TensorGridAuthState { isAuthenticated: boolean; accountLabel?: string; expiresAt?: string; }
 export interface TensorGridAuthRequest { authorizationUrl: string; }
 export const TENSORGRID_CALLBACK_URI = 'tcode://tensorgrid/auth';
 export const TENSORGRID_LOGIN_URL = 'https://tensorgrid.space/tcode/authorize';
+export const TENSORGRID_EXCHANGE_URL = 'https://tensorgrid.space/api/model-hub/tcode/exchange/';
+export const TENSORGRID_REVOKE_URL = 'https://tensorgrid.space/api/model-hub/tcode/revoke/';
 
 export function createCodeVerifier(): string {
     const bytes = crypto.getRandomValues(new Uint8Array(32));

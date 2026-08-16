@@ -1,5 +1,6 @@
 appId: com.tensorgrid.tcode
 productName: Tcode
+icon: resources/tensorgrid-mark.png
 copyright: Copyright © 2026 TensorGrid
 electronDist: ../../node_modules/electron/dist
 electronVersion: 42.3.0
@@ -25,6 +26,8 @@ files:
 extraResources:
   - from: ../../plugins
     to: app/plugins
+  - from: resources/tensorgrid-mark.ico
+    to: tensorgrid-mark.ico
 
 mac:
   identity: "-"
@@ -40,7 +43,7 @@ mac:
   artifactName: "${productName}-${version}-mac-${arch}.${ext}"
 
 win:
-  signAndEditExecutable: false
+  signAndEditExecutable: true
   target:
     - nsis
   artifactName: "${productName}-${version}-windows-${arch}.${ext}"
@@ -58,3 +61,6 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   runAfterFinish: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  include: resources/installer.nsh

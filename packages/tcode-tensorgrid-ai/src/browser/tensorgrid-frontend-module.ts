@@ -6,6 +6,7 @@ import { TensorGridCatalogService, TENSORGRID_CATALOG_SERVICE_PATH } from '../co
 import { TensorGridModelContribution } from './tensorgrid-model-contribution';
 import { TensorGridAuthUriHandler } from './tensorgrid-auth-uri-handler';
 import { TensorGridCommandContribution } from './tensorgrid-command-contribution';
+import { TensorGridAuthGate } from './tensorgrid-auth-gate';
 import '../../src/browser/style/tcode-chat.css';
 
 export default new ContainerModule(bind => {
@@ -16,6 +17,8 @@ export default new ContainerModule(bind => {
     bind(OpenHandler).toService(TensorGridAuthUriHandler);
     bind(TensorGridCommandContribution).toSelf().inSingletonScope();
     bind(CommandContribution).toService(TensorGridCommandContribution);
+    bind(TensorGridAuthGate).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(TensorGridAuthGate);
     bind(TensorGridCatalogService).toDynamicValue(ctx => {
         const provider = ctx.container.get<ServiceConnectionProvider>(RemoteConnectionProvider);
         return provider.createProxy<TensorGridCatalogService>(TENSORGRID_CATALOG_SERVICE_PATH);
