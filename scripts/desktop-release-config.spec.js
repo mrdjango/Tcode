@@ -20,6 +20,8 @@ const electronBrandAssetPath = path.join(root, 'examples/electron/resources/tens
 const electronBrandIconPath = path.join(root, 'examples/electron/resources/tensorgrid-mark.ico');
 const installerIncludePath = path.join(root, 'examples/electron/resources/installer.nsh');
 const legacyTheiaAssetPath = path.join(root, 'examples/electron/resources/theia-logo.svg');
+const electronMainSourcePath = path.join(root, 'packages/core/src/electron-main/electron-main-application.ts');
+const preloadSourcePath = path.join(root, 'packages/core/src/electron-browser/preload.ts');
 
 function readPngMetadata(png) {
     let offset = 8;
@@ -113,6 +115,26 @@ test('desktop packaging uses the transparent TensorGrid brand mark', () => {
         colorType: 6,
         topLeftAlpha: 0
     });
+});
+
+test('desktop packaging registers the Tcode callback protocol', () => {
+    const installer = fs.readFileSync(installerIncludePath, 'utf8');
+    assert.match(installer, /Software\\Classes\\tcode/);
+    assert.match(installer, /URL:Tcode Protocol/);
+    assert.match(installer, /URL Protocol/);
+    assert.match(installer, /tensorgrid-mark\.ico/);
+    assert.match(installer, /customUnInstall/);
+
+    const electronMain = fs.readFileSync(electronMainSourcePath, 'utf8');
+    assert.match(electronMain, /registerProtocolHandler/);
+    assert.match(electronMain, /pendingOpenUrls/);
+    assert.match(electronMain, /getOpenUrlFromArgv/);
+    assert.match(electronMain, /argv\.find\(argument => this\.isSupportedOpenUrl\(argument\)\)/);
+
+    const preload = fs.readFileSync(preloadSourcePath, 'utf8');
+    assert.match(preload, /pendingOpenUrls/);
+    assert.match(preload, /setOpenUrlHandler/);
+    assert.match(preload, /dispatchOpenUrl/);
 });
 
 test('runtime branding replaces Theia logo sources', () => {

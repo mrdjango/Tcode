@@ -41,13 +41,22 @@ const mainMenuId = 1;
 let nextMenuId = mainMenuId + 1;
 
 let openUrlHandler: ((url: string) => Promise<boolean>) | undefined;
+const pendingOpenUrls: Array<{ url: string; replyChannel: string }> = [];
 
-ipcRenderer.on(CHANNEL_OPEN_URL, async (event: Electron.IpcRendererEvent, url: string, replyChannel: string) => {
+const dispatchOpenUrl = async (url: string, replyChannel: string): Promise<void> => {
     if (openUrlHandler) {
-        event.sender.send(replyChannel, await openUrlHandler(url));
+        try {
+            ipcRenderer.send(replyChannel, await openUrlHandler(url));
+        } catch {
+            ipcRenderer.send(replyChannel, false);
+        }
     } else {
-        event.sender.send(replyChannel, false);
+        pendingOpenUrls.push({ url, replyChannel });
     }
+};
+
+ipcRenderer.on(CHANNEL_OPEN_URL, (_event: Electron.IpcRendererEvent, url: string, replyChannel: string) => {
+    void dispatchOpenUrl(url, replyChannel);
 });
 
 function convertMenu(menu: MenuDto[] | undefined, handlerMap: Map<number, () => void>): InternalMenuDto[] | undefined {
@@ -154,6 +163,10 @@ const api: TheiaCoreAPI = {
 
     setOpenUrlHandler(handler: (url: string) => Promise<boolean>): void {
         openUrlHandler = handler;
+        const queued = pendingOpenUrls.splice(0);
+        for (const request of queued) {
+            void dispatchOpenUrl(request.url, request.replyChannel);
+        }
     },
 
     onWindowEvent: function (event: WindowEvent, handler: () => void): Disposable {

@@ -10,5 +10,19 @@
   ClearErrors
   WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
 
+  ; Register the installed Tcode executable as the handler for TensorGrid callbacks.
+  WriteRegStr HKCU "Software\Classes\tcode" "" "URL:Tcode Protocol"
+  WriteRegStr HKCU "Software\Classes\tcode" "URL Protocol" ""
+  WriteRegStr HKCU "Software\Classes\tcode\DefaultIcon" "" "$INSTDIR\resources\tensorgrid-mark.ico"
+  WriteRegStr HKCU "Software\Classes\tcode\shell\open\command" "" "$\"$appExe$\" $\"%1$\""
+
   System::Call 'Shell32::SHChangeNotify(i 0x8000000, i 0, i 0, i 0)'
+!macroend
+
+!macro customUnInstall
+  ; Do not remove another application's handler if the association changed after installation.
+  ReadRegStr $0 HKCU "Software\Classes\tcode\shell\open\command" ""
+  StrCmp $0 "$\"$INSTDIR\Tcode.exe$\" $\"%1$\"" 0 done
+  DeleteRegKey HKCU "Software\Classes\tcode"
+done:
 !macroend

@@ -63,6 +63,16 @@ export class TensorGridAuthGate implements FrontendApplicationContribution {
                 this.show('signIn');
             }
         });
+        this.service.onAuthFailure?.(failure => {
+            this.authorizationUrl = undefined;
+            this.busy = false;
+            const message = failure.reason === 'cancelled'
+                ? 'TensorGrid authorization was cancelled.'
+                : failure.reason === 'invalid'
+                    ? 'The TensorGrid authorization link is invalid or expired.'
+                    : 'TensorGrid sign-in could not be completed. Try again.';
+            this.show('error', message);
+        });
         void this.resolveInitialState();
     }
 

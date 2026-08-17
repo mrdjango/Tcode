@@ -20,6 +20,8 @@ export interface TensorGridCatalogModel {
     ordering?: number;
 }
 export interface TensorGridAuthState { isAuthenticated: boolean; accountLabel?: string; expiresAt?: string; }
+export type TensorGridAuthFailureReason = 'cancelled' | 'invalid' | 'failed';
+export interface TensorGridAuthFailure { reason: TensorGridAuthFailureReason; }
 export interface TensorGridAuthRequest { authorizationUrl: string; }
 export const TENSORGRID_CALLBACK_URI = 'tcode://tensorgrid/auth';
 export const TENSORGRID_LOGIN_URL = 'https://tensorgrid.space/tcode/authorize';
@@ -43,4 +45,5 @@ export interface TensorGridCatalogService {
     getAuthState(): Promise<TensorGridAuthState>;
     logout(): Promise<void>;
     readonly onAuthStateChanged: Event<TensorGridAuthState>;
+    readonly onAuthFailure?: Event<TensorGridAuthFailure>;
 }

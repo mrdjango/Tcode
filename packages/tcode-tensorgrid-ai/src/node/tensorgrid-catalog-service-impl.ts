@@ -1,7 +1,7 @@
 import { Emitter, Event } from '@theia/core';
 import { KeyStoreService } from '@theia/core/lib/common/key-store';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { createCodeChallenge, createCodeVerifier, TensorGridAuthRequest, TensorGridAuthState, TensorGridCatalogModel, TensorGridCatalogService, TENSORGRID_CALLBACK_URI, TENSORGRID_EXCHANGE_URL, TENSORGRID_LOGIN_URL, TENSORGRID_OPENAI_BASE_URL, TENSORGRID_REVOKE_URL } from '../common';
+import { createCodeChallenge, createCodeVerifier, TensorGridAuthFailureReason, TensorGridAuthRequest, TensorGridAuthState, TensorGridCatalogModel, TensorGridCatalogService, TENSORGRID_CALLBACK_URI, TENSORGRID_EXCHANGE_URL, TENSORGRID_LOGIN_URL, TENSORGRID_OPENAI_BASE_URL, TENSORGRID_REVOKE_URL } from '../common';
 
 interface StoredCredentials { apiKey: string; accountLabel?: string; keyId?: string; scopes?: string[]; expiresAt?: string; }
 interface PendingLogin { state: string; codeVerifier: string; }
@@ -90,7 +90,9 @@ export function parseTensorGridCatalogResponse(
 export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
     @inject(KeyStoreService) protected readonly keyStoreService: KeyStoreService;
     protected readonly authChanged = new Emitter<TensorGridAuthState>();
+    protected readonly authFailed = new Emitter<{ reason: TensorGridAuthFailureReason }>();
     readonly onAuthStateChanged: Event<TensorGridAuthState> = this.authChanged.event;
+    readonly onAuthFailure = this.authFailed.event;
 
     async getApiKey(): Promise<string | undefined> {
         const credentials = await this.readCredentials();
@@ -110,6 +112,21 @@ export class TensorGridCatalogServiceImpl implements TensorGridCatalogService {
     }
 
     async completeLogin(callbackUrl: string): Promise<TensorGridAuthState> {
+        try {
+            return await this.completeLoginInternal(callbackUrl);
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : '';
+            const reason: TensorGridAuthFailureReason = detail.includes('cancelled')
+                ? 'cancelled'
+                : detail.includes('invalid') || detail.includes('expired')
+                    ? 'invalid'
+                    : 'failed';
+            this.authFailed.fire({ reason });
+            throw error;
+        }
+    }
+
+    protected async completeLoginInternal(callbackUrl: string): Promise<TensorGridAuthState> {
         const callback = new URL(callbackUrl);
         if (callback.protocol !== 'tcode:' || callback.hostname.toLowerCase() !== 'tensorgrid' || callback.pathname !== '/auth') throw new Error('Unexpected TensorGrid authentication callback.');
         const pendingRaw = await this.keyStoreService.getPassword(KEYSTORE_SERVICE, KEYSTORE_PENDING_ACCOUNT);

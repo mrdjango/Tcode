@@ -192,6 +192,8 @@ export class ElectronMainApplication {
     protected didUseNativeWindowFrameOnStart = new Map<number, boolean>();
     protected windows = new Map<number, TheiaElectronWindow>();
     protected activeWindowStack: number[] = [];
+    protected readonly pendingOpenUrls: string[] = [];
+    protected flushingOpenUrls = false;
     protected restarting = false;
 
     /** Used to temporarily store the reference to an early created main window */
@@ -242,10 +244,15 @@ export class ElectronMainApplication {
                         app.setAppUserModelId(config.electron.appUserModelId);
                     }
                     this.hookApplicationEvents();
-                    this.showInitialWindow(argv.includes('--open-url') ? argv[argv.length - 1] : undefined);
+                    const urlToOpen = this.getOpenUrlFromArgv(argv);
+                    if (urlToOpen) {
+                        this.enqueueOpenUrl(urlToOpen);
+                    }
+                    this.showInitialWindow();
                     const port = await this.stopwatch.startAsync('electron-main-start-backend', 'Starting backend', () => this.startBackend());
                     this._backendPort.resolve(port);
                     await app.whenReady();
+                    this.registerProtocolHandler();
                     await this.stopwatch.startAsync('electron-main-security-token', 'Attaching security token',
                         () => this.attachElectronSecurityToken(port));
                     await this.stopwatch.startAsync('electron-main-start-contributions', 'Starting contributions',
@@ -259,6 +266,39 @@ export class ElectronMainApplication {
                     });
                 },
             ).parse();
+    }
+
+    protected getOpenUrlFromArgv(argv: string[]): string | undefined {
+        const openUrlIndex = argv.indexOf('--open-url');
+        const candidate = openUrlIndex >= 0 ? argv[openUrlIndex + 1] : undefined;
+        if (candidate && this.isSupportedOpenUrl(candidate)) {
+            return candidate;
+        }
+        // The installer association intentionally uses the simpler
+        // `Tcode.exe "%1"` command. Electron's runtime registration adds
+        // `--open-url`, so accept both forms to keep first launch and
+        // second-instance delivery compatible with the installed registry.
+        return argv.find(argument => this.isSupportedOpenUrl(argument));
+    }
+
+    protected isSupportedOpenUrl(url: string): boolean {
+        try {
+            return !!this._config?.electron.uriScheme && new URI(url).scheme === this._config.electron.uriScheme;
+        } catch {
+            return false;
+        }
+    }
+
+    protected registerProtocolHandler(): void {
+        if (!isWindows || !this.config.electron.uriScheme) {
+            return;
+        }
+        const args = this.processArgv.isBundledElectronApp ? [] : [app.getAppPath()];
+        args.push('--open-url');
+        const registered = app.setAsDefaultProtocolClient(this.config.electron.uriScheme, process.execPath, args);
+        if (!registered) {
+            console.warn(`Could not register the ${this.config.electron.uriScheme} protocol handler.`);
+        }
     }
 
     protected getTitleBarStyle(config: FrontendApplicationConfig): 'native' | 'custom' {
@@ -338,7 +378,7 @@ export class ElectronMainApplication {
             !('THEIA_ELECTRON_NO_EARLY_WINDOW' in process.env && process.env.THEIA_ELECTRON_NO_EARLY_WINDOW === '1');
     }
 
-    protected showInitialWindow(urlToOpen: string | undefined): void {
+    protected showInitialWindow(): void {
         if (this.isShowWindowEarly() || this.isShowSplashScreen()) {
             app.whenReady().then(async () => {
                 const options = await this.getLastWindowOptions();
@@ -347,11 +387,6 @@ export class ElectronMainApplication {
                     options.preventAutomaticShow = true;
                 }
                 this.initialWindow = await this.createWindow({ ...options });
-                TheiaRendererAPI.onApplicationStateChanged(this.initialWindow.webContents, state => {
-                    if (state === 'ready' && urlToOpen) {
-                        this.openUrl(urlToOpen);
-                    }
-                });
                 if (this.isShowSplashScreen()) {
                     console.log('Showing splash screen');
                     this.configureAndShowSplashScreen(this.initialWindow);
@@ -439,7 +474,13 @@ export class ElectronMainApplication {
         const id = electronWindow.window.webContents.id;
         this.activeWindowStack.push(id);
         this.windows.set(id, electronWindow);
+        const readyListener = TheiaRendererAPI.onApplicationStateChanged(electronWindow.window.webContents, state => {
+            if (state === 'ready') {
+                void this.flushOpenUrls();
+            }
+        });
         electronWindow.onDidClose(() => {
+            readyListener.dispose();
             const stackIndex = this.activeWindowStack.indexOf(id);
             if (stackIndex >= 0) {
                 this.activeWindowStack.splice(stackIndex, 1);
@@ -588,11 +629,42 @@ export class ElectronMainApplication {
     }
 
     async openUrl(url: string): Promise<void> {
-        for (const id of this.activeWindowStack) {
-            const window = this.windows.get(id);
-            if (window && await window.openUrl(url)) {
-                break;
+        this.enqueueOpenUrl(url);
+        await this.flushOpenUrls();
+    }
+
+    protected enqueueOpenUrl(url: string): void {
+        if (!this.isSupportedOpenUrl(url) || this.pendingOpenUrls.includes(url)) {
+            return;
+        }
+        this.pendingOpenUrls.push(url);
+    }
+
+    protected async flushOpenUrls(): Promise<void> {
+        if (this.flushingOpenUrls || this.pendingOpenUrls.length === 0) {
+            return;
+        }
+        this.flushingOpenUrls = true;
+        try {
+            for (let index = 0; index < this.pendingOpenUrls.length;) {
+                const url = this.pendingOpenUrls[index];
+                let opened = false;
+                for (const id of this.activeWindowStack) {
+                    const window = this.windows.get(id);
+                    if (window && await window.openUrl(url)) {
+                        window.window.focus();
+                        opened = true;
+                        break;
+                    }
+                }
+                if (opened) {
+                    this.pendingOpenUrls.splice(index, 1);
+                } else {
+                    index++;
+                }
             }
+        } finally {
+            this.flushingOpenUrls = false;
         }
     }
 
@@ -824,9 +896,7 @@ export class ElectronMainApplication {
         app.on('web-contents-created', this.onWebContentsCreated.bind(this));
 
         if (isWindows) {
-            const args = this.processArgv.isBundledElectronApp ? [] : [app.getAppPath()];
-            args.push('--open-url');
-            app.setAsDefaultProtocolClient(this.config.electron.uriScheme, process.execPath, args);
+            // Registration is performed after app.whenReady() in start().
         } else {
             app.on('open-url', (evt, url) => {
                 this.openUrl(url);
@@ -842,8 +912,9 @@ export class ElectronMainApplication {
         // the second instance passes it's original argument array as the fourth argument to this method
         // The `argv` second parameter is not usable for us since it is mangled by electron before being passed here
 
-        if (originalArgv.includes('--open-url')) {
-            this.openUrl(originalArgv[originalArgv.length - 1]);
+        const urlToOpen = this.getOpenUrlFromArgv(originalArgv);
+        if (urlToOpen) {
+            void this.openUrl(urlToOpen);
         } else {
             createYargs(this.processArgv.getProcessArgvWithoutBin(originalArgv), cwd)
                 .help(false)
